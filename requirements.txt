@@ -1,0 +1,5 @@
+# Python 3.15. Setup from the repo root:
+#   py -3.15 -m venv .venv
+#   .venv\Scripts\python -m pip install -r requirements.txt
+langdetect==1.0.9
+openpyxl==3.1.5

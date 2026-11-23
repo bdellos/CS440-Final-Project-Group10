@@ -20,7 +20,20 @@ We produce **two taxonomies** and cross-tabulate them:
 
 Develop against the **sample** first. Do not run anything over the full dataset without being asked.
 
-> TODO: confirm the dataset schema (field names, whether each skill links to its source repo) and record it here.
+### Schema (confirmed 2026-11-23 against the sample; see `data/gitskills-sample/README.md`)
+
+Single SQLite file; same schema for sample and full dataset.
+
+- `artifacts`: one row per SKILL.md occurrence. Key `(repo_full_name, path)`. Identical `file_sha` = identical bytes; `dedup_primary = 1` marks the one representative per distinct content, and only it carries `content`, `sibling_*`, `has_scripts`, `has_references`. Front matter parsed into `frontmatter_valid`, `name`, `description`, `body_chars`. `location_class` is `canonical` (`.claude/skills/<name>/SKILL.md`), `skills-dir`, or `other`.
+- `repos`: `full_name` (joins to `artifacts.repo_full_name`), `stars`, `forks`, `language` (programming language), `license`, `description`, `created_at`, `pushed_at`.
+- `artifact_siblings`: files bundled with a representative skill (joins on `repo_full_name` + `artifact_path`).
+- `mining_runs`: collection provenance.
+
+**Every skill links to its source repo** via `repo_full_name`, so context classification is possible. Folder composition and history describe the representative's repo only; copies in other repos may differ.
+
+### Language
+
+About 13% of skills are not English (eligible pool in the sample: 86.6% en, 5.7% zh, then de, ja, ko, ...). Detect with `scripts/language.py`. **Human-coded sets (Round 0, held-out) are English-only**; agents label all languages, coding from the original text and storing evidence as original quote + English translation (#52, #53, #54).
 
 ## Method (summary)
 
