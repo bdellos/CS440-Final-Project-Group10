@@ -5,7 +5,7 @@ and each tool validates before it writes, so a malformed label can't get into th
 
 Tools, each added by its own issue:
     pipeline_status (#11)   get_skill (#13)   draw_sample / get_sample (#12)   start_run / finish_run (#58)
-    still to come: record_label (#14), get_disagreements (#15)
+    record_label (#14)   still to come: get_disagreements (#15)
 
 Run by Claude Code through .mcp.json (stdio). Manual check:
     .venv/Scripts/python scripts/pipeline_server.py --status
@@ -31,6 +31,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp_types import ToolAnnotations
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import labeling  # noqa: E402
 import models  # noqa: E402
 import runs  # noqa: E402
 import sampling  # noqa: E402
@@ -227,6 +228,37 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
             try:
                 return runs.finish_run(con, run_id, allow_incomplete)
             except runs.RunError as e:
+                raise ToolError(str(e)) from None
+
+    @server.tool(annotations=WRITE, structured_output=True)
+    def record_label(run_id: int, item_kind: str, item_id: str, taxonomy: str, codebook_version: int | None,
+                     labels: list[dict[str, Any]], proposals: list[dict[str, Any]] | None = None,
+                     skill_language: str | None = None, notes: str | None = None) -> dict[str, Any]:
+        """Store your judgment of ONE item in a run. The only way labels are written.
+
+        run_id: from start_run. item_kind: 'skill' or 'repo'. item_id: the skill's file_sha (or owner/repo).
+        taxonomy and codebook_version: must match the run (codebook_version null only in Round 0).
+        skill_language: required for skills; use the `language` that get_skill returned.
+        labels: [{"category": "<codebook key>", "evidence": [{"quote": "...", "quote_en": "..."}]}]
+            1-5 quotes per label. `quote` is copied EXACTLY from the item (whitespace aside; use ...
+            to skip text). `quote_en` is its English translation, identical to `quote` for English skills.
+        proposals: PROPOSED_NEW, when no codebook category fits (not allowed in Round 0):
+            [{"name": "...", "definition": "...", "justification": "why nothing fits",
+              "evidence": [{"quote": "...", "quote_en": "..."}]}]  (all in English except `quote`).
+        A record needs at least one label or one proposal.
+        If anything is wrong, nothing is stored and the error lists every problem: fix them all and
+        call again. Each item can be labeled once per run. Returns the run's progress."""
+        record = {"schema_version": 1, "run_id": run_id, "item_kind": item_kind, "item_id": item_id,
+                  "taxonomy": taxonomy, "codebook_version": codebook_version, "labels": labels,
+                  "proposals": proposals or []}
+        if skill_language is not None:
+            record["skill_language"] = skill_language
+        if notes:
+            record["notes"] = notes
+        with self_db() as con:
+            try:
+                return labeling.store_label(con, record, allow_human=False)
+            except labeling.LabelRejected as e:
                 raise ToolError(str(e)) from None
 
     return server
