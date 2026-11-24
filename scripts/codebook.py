@@ -238,6 +238,45 @@ def commit_message(cb: Codebook) -> str:
     return f"codebook: {cb.taxonomy} v{cb.version:02d}{variant} (round {cb.round})"
 
 
+class NoCodebook(LookupError):
+    """The run has no codebook to give (unknown run, open coding, unreadable commit)."""
+
+
+def for_run(con, run_id: int) -> dict:
+    """The exact codebook a run applies (#28): the registered file as it was at its registration
+    commit, so a later edit or checkout can't change what the run is labeled against."""
+    row = con.execute(
+        """SELECT r.run_id, r.taxonomy, r.rater, r.purpose, r.finished_at, s.name AS sample, s.item_kind,
+                  v.codebook_version_id, v.version, v.variant, v.file_path, v.git_commit, v.frozen,
+                  (SELECT COUNT(*) FROM sample_items i WHERE i.sample_id = r.sample_id) AS items,
+                  (SELECT COUNT(*) FROM annotations a WHERE a.run_id = r.run_id) AS labeled
+           FROM runs r JOIN samples s USING (sample_id)
+           LEFT JOIN codebook_versions v USING (codebook_version_id)
+           WHERE r.run_id = ?""", (run_id,)).fetchone()
+    if row is None:
+        raise NoCodebook(f"run {run_id} does not exist")
+    if row["codebook_version_id"] is None:
+        raise NoCodebook(f"run {run_id} is open coding (Round 0): there is no codebook; invent your own codes")
+    try:
+        text = _git("show", f"{row['git_commit']}:{row['file_path']}")
+    except (subprocess.CalledProcessError, OSError):
+        raise NoCodebook(f"can't read {row['file_path']} at commit {row['git_commit']}; "
+                         "the codebook must be registered from a commit in this repository") from None
+    categories = [dict(c) for c in con.execute(
+        "SELECT category_key AS key, name FROM categories WHERE codebook_version_id = ? ORDER BY category_key",
+        (row["codebook_version_id"],))]
+    return {
+        "run": {"run_id": row["run_id"], "rater": row["rater"], "purpose": row["purpose"], "sample": row["sample"],
+                "item_kind": row["item_kind"], "items": row["items"], "labeled": row["labeled"],
+                "remaining": row["items"] - row["labeled"], "finished": row["finished_at"] is not None},
+        "codebook": {"taxonomy": row["taxonomy"], "variant": row["variant"], "version": row["version"],
+                     "file": row["file_path"], "git_commit": row["git_commit"], "frozen": bool(row["frozen"])},
+        "category_keys": [c["key"] for c in categories],
+        "categories": categories,
+        "text": text,
+    }
+
+
 def register(path, con) -> str:
     """Load a committed, valid version into codebook_versions/categories. Idempotent."""
     cb = parse(path)

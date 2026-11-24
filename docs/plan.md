@@ -46,7 +46,7 @@ The Skeptic is cheap and yields agent-vs-agent disagreement data for the threats
 
 Using skills to study skills is a nice meta angle for the write-up.
 
-- **`apply-codebook`**: SKILL.md holds the labeling procedure; the codebook is a reference file inside the skill, so a new version is a file swap.
+- **`apply-codebook`**: SKILL.md holds the labeling procedure. The codebook itself is not copied into the skill: the agent calls `get_codebook(run_id)`, which returns the exact version its run was started with, read from the commit it was registered at (decided in #28, so a copy can never drift from the run).
 - **`qualitative-coding-protocol`**: how to quote evidence, when to multi-label, when to use `PROPOSED_NEW`.
 - **`repo-context-heuristics`**: signals per repo type, e.g. a `skills/` folder with 40+ unrelated skills and no app code means a catalog.
 - **`msr-report`**: the format for the paper's tables and figures.

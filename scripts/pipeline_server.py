@@ -5,7 +5,7 @@ and each tool validates before it writes, so a malformed label can't get into th
 
 Tools, each added by its own issue:
     pipeline_status (#11)   get_skill (#13)   draw_sample / get_sample (#12)   start_run / finish_run (#58)
-    record_label (#14)   get_disagreements (#15)
+    record_label (#14)   get_disagreements (#15)   get_codebook (#28)
 
 Run by Claude Code through .mcp.json (stdio). Manual check:
     .venv/Scripts/python scripts/pipeline_server.py --status
@@ -36,7 +36,7 @@ import labeling  # noqa: E402
 import models  # noqa: E402
 import runs  # noqa: E402
 import sampling  # noqa: E402
-from codebook import check as codebook_check  # noqa: E402
+from codebook import NoCodebook, check as codebook_check, for_run as codebook_for_run  # noqa: E402
 from db import SCHEMA_VERSION, connect, dataset_path, labels_path  # noqa: E402
 
 log = logging.getLogger("pipeline")
@@ -263,6 +263,22 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
             try:
                 return labeling.store_label(con, record, allow_human=False)
             except labeling.LabelRejected as e:
+                raise ToolError(str(e)) from None
+
+    @server.tool(annotations=READ_ONLY, structured_output=True)
+    def get_codebook(run_id: int) -> dict[str, Any]:
+        """The codebook your run applies, exactly as registered, plus the run's details.
+
+        Call this first, once per run, with the run_id you were given. Returns:
+          run:           sample name, item kind, how many items are labeled and remaining
+          codebook:      taxonomy, variant, version, and the commit it was registered from
+          category_keys: the only values allowed as `category` in record_label
+          text:          the full codebook (Definition / Include / Exclude / Examples per category)
+        Open-coding runs (Round 0) have no codebook and get an error."""
+        with self_db() as con:
+            try:
+                return codebook_for_run(con, run_id)
+            except NoCodebook as e:
                 raise ToolError(str(e)) from None
 
     @server.tool(annotations=READ_ONLY, structured_output=True)

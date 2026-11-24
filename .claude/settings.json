@@ -11,6 +11,7 @@
       "mcp__pipeline__finish_run",
       "mcp__pipeline__record_label",
       "mcp__pipeline__get_disagreements",
+      "mcp__pipeline__get_codebook",
       "mcp__github__github_status",
       "mcp__github__get_repo_context",
       "Edit(/codebook/**)",

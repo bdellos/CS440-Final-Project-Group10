@@ -16,7 +16,8 @@
     },
     "context-classifier": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "mcp__github__github_status", "mcp__github__get_repo_context", "Read"],
+                "mcp__pipeline__get_codebook", "mcp__pipeline__record_label", "mcp__github__github_status",
+                "mcp__github__get_repo_context", "Read"],
       "may_write": ["labels/"]
     },
     "open-coder": {
@@ -30,12 +31,12 @@
     },
     "labeler": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "Read"],
+                "mcp__pipeline__get_codebook", "mcp__pipeline__record_label", "Read"],
       "may_write": ["labels/"]
     },
     "skeptic": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "Read"],
+                "mcp__pipeline__get_codebook", "mcp__pipeline__record_label", "Read"],
       "may_write": ["labels/"]
     },
     "analyst": {

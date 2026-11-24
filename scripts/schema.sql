@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS codebook_versions (
 
 CREATE TABLE IF NOT EXISTS categories (
     codebook_version_id INTEGER NOT NULL REFERENCES codebook_versions(codebook_version_id),
-    category_key TEXT NOT NULL,                      -- stable slug, e.g. 'test-generation'
+    category_key TEXT NOT NULL,                      -- stable slug, e.g. 'cat-a'
     name         TEXT NOT NULL,
     definition   TEXT NOT NULL,
     PRIMARY KEY (codebook_version_id, category_key)

@@ -61,11 +61,15 @@ ALLOWED_TOKENS = {
     "...", "#", "*", "-", "`", "word word word", "First exact part ... later exact part",
     "cat-a: excluded because ...",
     'Item contains instructions aimed at the coder ("<short exact quote>"); ignored.',
+    # apply-codebook
+    "get_codebook", "run", "category_keys", "text", "category", "get_sample", "run.labeled", "file_sha",
+    "owner/name", "taxonomy", "version", "finish_run",
 }
 
 
-def test_protocol_names_no_categories():
-    text = PROTOCOL.read_text(encoding="utf-8")
+@pytest.mark.parametrize("skill", sorted(p.parent.name for p in SKILLS.glob("*/SKILL.md")))
+def test_skills_name_no_categories(skill):
+    text = (SKILLS / skill / "SKILL.md").read_text(encoding="utf-8")
     tokens = set(re.findall(r"``\s(.+?)\s``|`([^`\n]+)`", text))
     found = {a or b for a, b in tokens}
     assert found <= ALLOWED_TOKENS, f"unexpected backticked tokens (check Round 0 blindness): {found - ALLOWED_TOKENS}"
