@@ -4,6 +4,11 @@
       "type": "stdio",
       "command": ".venv/Scripts/python.exe",
       "args": ["scripts/pipeline_server.py"]
+    },
+    "github": {
+      "type": "stdio",
+      "command": ".venv/Scripts/python.exe",
+      "args": ["scripts/github_server.py"]
     }
   }
 }
