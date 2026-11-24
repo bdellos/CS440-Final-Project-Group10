@@ -78,7 +78,7 @@ schemas/label.schema.json
 ## Rules for agents
 
 - **Only `codebook-consolidator` writes to `codebook/`.** After freeze, nobody does.
-- **Never edit a past codebook version**; create the next `vNN`.
+- **Never edit a past codebook version**; create the next one with `scripts/codebook.py next <taxonomy> --round N`. Format and workflow: `codebook/README.md`. `scripts/codebook.py check` must pass before any codebook commit.
 - Every label record must pass `scripts/validate_label.py` (the JSON schema `schemas/label.schema.json` plus database checks) and include: `run_id`, item id, labels, verbatim quoted evidence (`quote` + English `quote_en`), `codebook_version`. Model and temperature are stored once per run, not in each record.
 - Quotes must appear in the skill text exactly (whitespace aside; `...` may elide). Code from the original text, never from a translation; translate only the evidence.
 - Category changes are **proposals** for the humans, not decisions.
