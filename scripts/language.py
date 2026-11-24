@@ -26,7 +26,8 @@ _HTML = re.compile(r"<[^>]+>")
 
 
 def prose(text: str) -> str:
-    t = _FRONTMATTER.sub("", text or "")
+    t = (text or "").lstrip("﻿")  # a UTF-8 byte-order mark would hide the front matter
+    t = _FRONTMATTER.sub("", t)
     for pat in (_FENCED, _INLINE, _URL, _HTML):
         t = pat.sub(" ", t)
     return t[:MAX_PROSE_CHARS]

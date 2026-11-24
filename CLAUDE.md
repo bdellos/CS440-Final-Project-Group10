@@ -33,7 +33,7 @@ Single SQLite file; same schema for sample and full dataset.
 
 ### Language
 
-About 13% of skills are not English (eligible pool in the sample: 86.6% en, 5.7% zh, then de, ja, ko, ...). Detect with `scripts/language.py`. **Human-coded sets (Round 0, held-out) are English-only**; agents label all languages, coding from the original text and storing evidence as original quote + English translation (#52, #53, #54).
+About 13% of skills are not English (eligible pool in the sample: 86.6% en, 5.7% zh, then de, ja, ko, ...). Detected for every skill by `scripts/detect_languages.py` into `skill_language` (view: `skills_with_language`). **Human-coded sets (Round 0, held-out) are English-only: `language = 'en'`; `mixed` and `unknown` are excluded**; agents label all languages, coding from the original text and storing evidence as original quote + English translation (#52, #53, #54).
 
 ## Method (summary)
 

@@ -2,3 +2,8 @@
 /.venv/
 __pycache__/
 *.py[cod]
+
+# Project database: commit labels/dump.sql instead (scripts/db_dump.py)
+/labels/*.db
+/labels/*.db-wal
+/labels/*.db-shm
