@@ -3,6 +3,7 @@
 #   .venv\Scripts\python -m pip install -r requirements.txt
 jsonschema==4.26.0
 langdetect==1.0.9
+mcp==2.3.0
 openpyxl==3.1.5
 
 # tests:  .venv\Scripts\python -m pytest tests

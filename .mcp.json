@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pipeline": {
+      "type": "stdio",
+      "command": ".venv/Scripts/python.exe",
+      "args": ["scripts/pipeline_server.py"]
+    }
+  }
+}
