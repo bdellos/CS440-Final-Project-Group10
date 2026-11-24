@@ -47,6 +47,7 @@ INSERT INTO "dataset_loads" VALUES(2,'data/gitskills-sample/agent_skills_sample/
 INSERT INTO "dataset_loads" VALUES(3,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
 INSERT INTO "dataset_loads" VALUES(4,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
 INSERT INTO "dataset_loads" VALUES(5,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T01:28:36Z');
+INSERT INTO "dataset_loads" VALUES(6,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T02:45:14Z');
 CREATE TABLE evidence (
     evidence_id  INTEGER PRIMARY KEY,
     annotation_id INTEGER NOT NULL REFERENCES annotations(annotation_id),
@@ -70,20 +71,22 @@ CREATE TABLE proposals (
     CHECK (status <> 'merged' OR merged_into IS NOT NULL),
     CHECK (status = 'pending' OR decided_by IS NOT NULL)
 ) STRICT;
-CREATE TABLE runs (
+CREATE TABLE "runs" (
     run_id       INTEGER PRIMARY KEY,
     sample_id    INTEGER NOT NULL REFERENCES samples(sample_id),
     taxonomy     TEXT NOT NULL CHECK (taxonomy IN ('purpose', 'context')),
     codebook_version_id INTEGER REFERENCES codebook_versions(codebook_version_id),  -- NULL = open coding (Round 0)
     rater_kind   TEXT NOT NULL CHECK (rater_kind IN ('agent', 'human')),
     rater        TEXT NOT NULL,                      -- 'labeler', 'skeptic', 'open-coder', 'brendan', 'ryan'
-    model        TEXT,                               -- pinned model id (#18); NULL for humans
-    temperature  REAL,
+    model        TEXT,                               -- pinned model id from config/models.json (#18); NULL for humans
+    temperature  REAL,                               -- always NULL: current Claude models reject temperature (#18)
+    -- from config/models.json; 'unrecorded' only for agent runs made before effort was tracked (schema v2)
+    effort       TEXT CHECK (effort IS NULL OR effort IN ('low', 'medium', 'high', 'xhigh', 'max', 'unrecorded')),
     purpose      TEXT NOT NULL,                      -- 'round0', 'round', 'final', 'heldout', 'ablation', 'smoke'
     started_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     finished_at  TEXT,                               -- set by the Stop hook (#36)
     notes        TEXT,
-    CHECK (rater_kind = 'human' OR model IS NOT NULL)
+    CHECK (rater_kind = 'human' OR (model IS NOT NULL AND effort IS NOT NULL))
 ) STRICT;
 CREATE TABLE sample_items (
     sample_id    INTEGER NOT NULL REFERENCES samples(sample_id),
@@ -173,6 +176,12 @@ CREATE TABLE skills (
     copies       INTEGER NOT NULL,                   -- file occurrences with this content
     n_repos      INTEGER NOT NULL                    -- distinct repos holding a copy
 ) STRICT;
+CREATE INDEX annotations_item ON annotations(item_id);
+CREATE INDEX evidence_annotation ON evidence(annotation_id);
+CREATE INDEX proposals_status ON proposals(status);
+CREATE INDEX skills_sampling ON skills(frontmatter_valid, body_chars);
+CREATE INDEX skills_repo ON skills(repo_full_name);
+CREATE INDEX skills_name ON skills(name_key);
 CREATE TRIGGER categories_frozen_insert
 BEFORE INSERT ON categories
 WHEN (SELECT frozen FROM codebook_versions WHERE codebook_version_id = NEW.codebook_version_id) = 1
@@ -195,9 +204,16 @@ WHEN (SELECT r.codebook_version_id FROM annotations a JOIN runs r USING (run_id)
       JOIN categories c ON c.codebook_version_id = r.codebook_version_id
       WHERE a.annotation_id = NEW.annotation_id AND c.category_key = NEW.category_key)
 BEGIN SELECT RAISE(ABORT, 'category not in this run''s codebook'); END;
-CREATE INDEX annotations_item ON annotations(item_id);
-CREATE INDEX evidence_annotation ON evidence(annotation_id);
-CREATE INDEX proposals_status ON proposals(status);
+CREATE VIEW proposals_review AS
+SELECT p.proposal_id, p.status, p.proposed_name, p.definition, p.justification,
+       r.run_id, r.rater, a.item_id, a.skill_language,
+       CASE WHEN a.skill_language IS NOT NULL AND a.skill_language <> 'en' THEN 1 ELSE 0 END AS needs_extra_review
+FROM proposals p
+JOIN annotations a USING (annotation_id)
+JOIN runs r USING (run_id);
+CREATE VIEW skills_with_language AS
+SELECT s.*, l.language, l.confidence AS language_confidence
+FROM skills s LEFT JOIN skill_language l USING (file_sha);
 CREATE VIEW label_rows AS
 SELECT r.run_id, r.purpose AS run_purpose, r.taxonomy, r.rater_kind, r.rater, r.model,
        cv.version AS codebook_version, cv.variant AS codebook_variant,
@@ -207,17 +223,4 @@ JOIN annotations a USING (annotation_id)
 JOIN runs r USING (run_id)
 JOIN samples s USING (sample_id)
 LEFT JOIN codebook_versions cv USING (codebook_version_id);
-CREATE INDEX skills_sampling ON skills(frontmatter_valid, body_chars);
-CREATE INDEX skills_repo ON skills(repo_full_name);
-CREATE INDEX skills_name ON skills(name_key);
-CREATE VIEW skills_with_language AS
-SELECT s.*, l.language, l.confidence AS language_confidence
-FROM skills s LEFT JOIN skill_language l USING (file_sha);
-CREATE VIEW proposals_review AS
-SELECT p.proposal_id, p.status, p.proposed_name, p.definition, p.justification,
-       r.run_id, r.rater, a.item_id, a.skill_language,
-       CASE WHEN a.skill_language IS NOT NULL AND a.skill_language <> 'en' THEN 1 ELSE 0 END AS needs_extra_review
-FROM proposals p
-JOIN annotations a USING (annotation_id)
-JOIN runs r USING (run_id);
 COMMIT;

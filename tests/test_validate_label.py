@@ -80,13 +80,13 @@ def env(tmp_path_factory):
         ccb = con.execute("INSERT INTO codebook_versions (taxonomy, version, file_path) "
                           "VALUES ('context', 1, 'codebook/context/v01.md')").lastrowid
         con.execute("INSERT INTO categories VALUES (?, 'catalog', 'Catalog', 'Collection of unrelated skills')", (ccb,))
-        q = ("INSERT INTO runs (sample_id, taxonomy, codebook_version_id, rater_kind, rater, model, temperature, "
+        q = ("INSERT INTO runs (sample_id, taxonomy, codebook_version_id, rater_kind, rater, model, effort, "
              "purpose) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         runs = {
-            "coded": con.execute(q, (sid, "purpose", cb, "agent", "labeler", "m", 0.0, "smoke")).lastrowid,
-            "open": con.execute(q, (sid, "purpose", None, "agent", "open-coder", "m", 0.0, "smoke")).lastrowid,
-            "context": con.execute(q, (rid, "context", ccb, "agent", "context-classifier", "m", 0.0, "smoke")).lastrowid,
-            "finished": con.execute(q, (sid, "purpose", cb, "agent", "labeler", "m", 0.0, "smoke")).lastrowid,
+            "coded": con.execute(q, (sid, "purpose", cb, "agent", "labeler", "m", "low", "smoke")).lastrowid,
+            "open": con.execute(q, (sid, "purpose", None, "agent", "open-coder", "m", "low", "smoke")).lastrowid,
+            "context": con.execute(q, (rid, "context", ccb, "agent", "context-classifier", "m", "low", "smoke")).lastrowid,
+            "finished": con.execute(q, (sid, "purpose", cb, "agent", "labeler", "m", "low", "smoke")).lastrowid,
         }
         con.execute("UPDATE runs SET finished_at = '2026-01-01T00:00:00Z' WHERE run_id = ?", (runs["finished"],))
     return dict(con=con, runs=runs, en=(en_sha, en_quote), zh=(zh_sha, zh_quote), repo=repo)
