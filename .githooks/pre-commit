@@ -1,0 +1,11 @@
+#!/bin/sh
+# Git pre-commit hook (issue #33): run the codebook check before any commit that touches codebook/.
+# Enable once per clone:  git config core.hooksPath .githooks
+if git diff --cached --name-only | grep -q '^codebook/'; then
+    if [ -x .venv/Scripts/python.exe ]; then PY=.venv/Scripts/python.exe; else PY=.venv/bin/python; fi
+    "$PY" scripts/codebook.py check || {
+        echo "pre-commit: codebook check failed; fix the problems above (or create the next version) and commit again." >&2
+        exit 1
+    }
+fi
+exit 0
