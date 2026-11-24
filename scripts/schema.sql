@@ -22,6 +22,40 @@ PRAGMA foreign_keys = ON;
 -- ---------------------------------------------------------------------------
 -- Skill attributes we compute (the dataset's own columns stay in gs.artifacts)
 -- ---------------------------------------------------------------------------
+
+-- Sampling frame (#8): one row per distinct skill content, built by scripts/load_dataset.py
+-- with a single scan of gs.artifacts. Holds only what sampling filters on, never the text,
+-- so sample() never has to scan the dataset (content is stored inline: ~41 GB on the full set).
+CREATE TABLE IF NOT EXISTS skills (
+    file_sha     TEXT PRIMARY KEY,
+    repo_full_name TEXT NOT NULL,                    -- the representative's repo (dedup_primary = 1)
+    path         TEXT NOT NULL,
+    name         TEXT,
+    name_key     TEXT,                               -- lower(trim(name)), for one-per-name sampling
+    frontmatter_valid INTEGER,
+    body_chars   INTEGER,
+    location_class TEXT,
+    has_scripts  INTEGER,
+    has_references INTEGER,
+    copies       INTEGER NOT NULL,                   -- file occurrences with this content
+    n_repos      INTEGER NOT NULL                    -- distinct repos holding a copy
+) STRICT;
+CREATE INDEX IF NOT EXISTS skills_sampling ON skills(frontmatter_valid, body_chars);
+CREATE INDEX IF NOT EXISTS skills_repo ON skills(repo_full_name);
+CREATE INDEX IF NOT EXISTS skills_name ON skills(name_key);
+
+-- Which dataset file the skills table was built from (provenance for every later sample).
+CREATE TABLE IF NOT EXISTS dataset_loads (
+    load_id      INTEGER PRIMARY KEY,
+    dataset_path TEXT NOT NULL,
+    dataset_bytes INTEGER NOT NULL,
+    dataset_mtime TEXT NOT NULL,
+    artifacts    INTEGER NOT NULL,                   -- file occurrences
+    distinct_skills INTEGER NOT NULL,
+    repos        INTEGER NOT NULL,
+    loaded_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS skill_language (          -- populated by #52
     file_sha     TEXT PRIMARY KEY,
     language     TEXT NOT NULL,                      -- 'en', 'zh', 'mixed', 'unknown', ...
