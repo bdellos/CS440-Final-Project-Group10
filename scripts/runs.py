@@ -110,7 +110,26 @@ def finish_run(con, run_id: int, allow_incomplete: bool = False) -> dict:
                        f"{progress['unlabeled_first_50'][:5]}; label them, or pass allow_incomplete to finish anyway")
     with con:
         con.execute("UPDATE runs SET finished_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE run_id = ?", (run_id,))
-    return {"run_id": run_id, "finished": True, **progress}
+    return {"run_id": run_id, "finished": True, **progress, "agreement": batch_agreement(con, run_id)}
+
+
+def batch_agreement(con, run_id: int) -> list:
+    """Agreement of a run with every other finished run on the same sample, taxonomy and codebook
+    version (#36), e.g. labeler vs skeptic, or agent vs human on the held-out set. Round 0 runs
+    (no codebook) can't be compared category by category, so they get []."""
+    import disagreements
+    others = con.execute(
+        """SELECT o.run_id, o.rater, o.rater_kind FROM runs r JOIN runs o
+             ON o.sample_id = r.sample_id AND o.taxonomy = r.taxonomy
+            AND o.codebook_version_id = r.codebook_version_id AND o.run_id <> r.run_id
+            AND o.finished_at IS NOT NULL
+           WHERE r.run_id = ? ORDER BY o.run_id""", (run_id,)).fetchall()
+    out = []
+    for o in others:
+        s = disagreements.compare(con, run_id, o["run_id"], limit=1)["summary"]
+        out.append({"other_run": o["run_id"], "other_rater": o["rater"], "other_rater_kind": o["rater_kind"],
+                    **s})
+    return out
 
 
 def main():
@@ -137,6 +156,10 @@ def main():
         else:
             r = finish_run(con, a.run_id, a.allow_incomplete)
             print(f"finished run {r['run_id']}: {r['labeled']}/{r['items']} labeled")
+            for g in r["agreement"]:
+                print(f"  vs run {g['other_run']} ({g['other_rater']}): exact agreement {g['exact_agreement']} "
+                      f"over {g['items_compared']} items ({g['agree']} agree, {g['partial']} partial, "
+                      f"{g['disjoint']} disjoint, {g['missing']} missing)")
     except RunError as e:
         sys.exit(f"error: {e}")
 

@@ -224,7 +224,10 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
     def finish_run(run_id: int, allow_incomplete: bool = False) -> dict[str, Any]:
         """Close a run after its sample is labeled. Reports how many items are labeled.
         Refuses while items are unlabeled unless allow_incomplete is true. A finished run
-        accepts no more labels."""
+        accepts no more labels.
+        `agreement` compares it with every other finished run on the same sample and codebook
+        version (e.g. labeler vs skeptic): agree / partial / disjoint / missing counts and the
+        exact-agreement rate. Use get_disagreements for the item-by-item view."""
         with self_db() as con:
             try:
                 return runs.finish_run(con, run_id, allow_incomplete)
