@@ -72,7 +72,7 @@ schemas/label.schema.json
 | open-coder | Round 0 free-form codes with evidence | `labels/round0/` |
 | codebook-consolidator | merge synonyms, write definitions + include/exclude + examples | `codebook/` (only this agent) |
 | labeler | apply codebook, emit schema-valid JSON | `labels/` |
-| skeptic | independent second rater / argues against labeler | `labels/` |
+| skeptic | independent second rater: same codebook, own run, sceptical reading; never sees the labeler's labels | `labels/` |
 | analyst | cross-tabs, frequencies, kappa, figures | `analysis/` |
 
 ## Rules for agents

@@ -84,6 +84,25 @@ def test_labeler_applies_the_codebook_independently():
     assert "reply with numbers only" in text and "Do not list the labels you gave" in text
 
 
+def test_skeptic_is_an_independent_sceptical_second_rater(monkeypatch):
+    """#26: independent labeling only (never the labeler's output), same codebook and skills as the
+    labeler, but a different stance, so the two runs aren't the same rater twice."""
+    import prompts
+    monkeypatch.setattr(prompts, "CLAUDE_DIR", ROOT / ".claude")  # the real files, not conftest's stubs
+    skeptic, labeler = AGENTS / "skeptic.md", AGENTS / "labeler.md"
+    assert prompts._list_field(skeptic.read_text(encoding="utf-8"), "skills") == \
+        prompts._list_field(labeler.read_text(encoding="utf-8"), "skills")
+    assert set(permissions.agent_tools(skeptic)) == set(permissions.agent_tools(labeler))
+    assert models.frontmatter(skeptic)["model"] == models.frontmatter(labeler)["model"]
+    text = body(skeptic)
+    for rule in ("Name the strongest rival", "Apply Exclude rules strictly", "Demand evidence for every label",
+                 "Be strict about second labels", "not disagreeing on purpose"):
+        assert rule in text
+    assert "never see its labels" in text and "Do not list the labels you gave" in text
+    assert prompts.prompt_hash(prompts.instruction_files("skeptic")) != \
+        prompts.prompt_hash(prompts.instruction_files("labeler"))
+
+
 def test_sampler_draws_once_after_a_dry_run():
     text = body(AGENTS / "sampler.md")
     assert "dry_run: true" in text and "dry_run: false" in text
