@@ -4,8 +4,8 @@ Agents never edit labels.db or label files directly. Every write goes through a 
 and each tool validates before it writes, so a malformed label can't get into the data.
 
 Tools, each added by its own issue:
-    pipeline_status (#11)   get_skill (#13)   draw_sample / get_sample (#12)
-    still to come: start_run / finish_run (#58), record_label (#14), get_disagreements (#15)
+    pipeline_status (#11)   get_skill (#13)   draw_sample / get_sample (#12)   start_run / finish_run (#58)
+    still to come: record_label (#14), get_disagreements (#15)
 
 Run by Claude Code through .mcp.json (stdio). Manual check:
     .venv/Scripts/python scripts/pipeline_server.py --status
@@ -32,6 +32,7 @@ from mcp_types import ToolAnnotations
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import models  # noqa: E402
+import runs  # noqa: E402
 import sampling  # noqa: E402
 from codebook import check as codebook_check  # noqa: E402
 from db import SCHEMA_VERSION, connect, dataset_path, labels_path  # noqa: E402
@@ -195,6 +196,37 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
             try:
                 return sampling.get(con, name, offset, limit)
             except sampling.SampleError as e:
+                raise ToolError(str(e)) from None
+
+    @server.tool(annotations=WRITE, structured_output=True)
+    def start_run(sample: str, taxonomy: str, rater: str, purpose: str, codebook_version: int | None = None,
+                  codebook_variant: str = "main", notes: str | None = None) -> dict[str, Any]:
+        """Start a labeling run: one agent applying one codebook to one stored sample.
+        Every label needs the run_id this returns.
+
+        rater: the agent doing the labeling, exactly as named in config/models.json (e.g. 'labeler').
+               Its model and effort are taken from that file and recorded on the run.
+        taxonomy: 'purpose' (skills) or 'context' (repos), matching the sample.
+        purpose: 'round0', 'round', 'final', 'heldout', 'ablation' or 'smoke'.
+        codebook_version: the registered codebook version to apply; null only for purpose 'round0'
+                          (open coding).
+        Agent runs only: human runs are started by a person with scripts/runs.py."""
+        with self_db() as con:
+            try:
+                return runs.start_run(con, sample, taxonomy, rater, purpose, codebook_version, codebook_variant,
+                                      notes, human=False)
+            except runs.RunError as e:
+                raise ToolError(str(e)) from None
+
+    @server.tool(annotations=WRITE, structured_output=True)
+    def finish_run(run_id: int, allow_incomplete: bool = False) -> dict[str, Any]:
+        """Close a run after its sample is labeled. Reports how many items are labeled.
+        Refuses while items are unlabeled unless allow_incomplete is true. A finished run
+        accepts no more labels."""
+        with self_db() as con:
+            try:
+                return runs.finish_run(con, run_id, allow_incomplete)
+            except runs.RunError as e:
                 raise ToolError(str(e)) from None
 
     return server
