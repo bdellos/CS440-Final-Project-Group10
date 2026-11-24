@@ -48,7 +48,7 @@ def test_status_on_fresh_database(tmp_path):
     r = call(build_server(labels_db=fresh_db(tmp_path)), "pipeline_status")
     assert not r.is_error, text(r)
     s = r.structured_content
-    assert s["schema_version"] == 2
+    assert s["schema_version"] == 3
     assert s["dataset"] is None and s["samples"] == [] and s["open_runs"] == []
     assert s["codebook_files_ok"] is True and s["model_config_problems"] == []
 
@@ -79,7 +79,7 @@ def test_runs_over_stdio_from_mcp_json():
             return await client.call_tool("pipeline_status", {})
     r = anyio.run(go)
     assert not r.is_error, text(r)
-    assert r.structured_content["schema_version"] == 2
+    assert r.structured_content["schema_version"] == 3
 
 
 # --- get_skill (#13) ---------------------------------------------------------

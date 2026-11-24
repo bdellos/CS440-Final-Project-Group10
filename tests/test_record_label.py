@@ -169,8 +169,8 @@ def test_shape_errors_come_back_as_tool_errors(env):
 def test_crash_mid_write_leaves_nothing(env, monkeypatch):
     real = labeling._write
 
-    def boom(con, record):
-        real(con, record)            # rows are inserted...
+    def boom(con, record, *rest):
+        real(con, record, *rest)            # rows are inserted...
         raise RuntimeError("disk on fire")  # ...then something fails before commit
     monkeypatch.setattr(labeling, "_write", boom)
     record = {"schema_version": 1, **args(env), "proposals": []}

@@ -51,7 +51,8 @@ def call(db, tool, args):
 
 
 def label(con, run_id, sha):
-    con.execute("INSERT INTO annotations (run_id, item_id) VALUES (?, ?)", (run_id, sha))
+    con.execute("INSERT OR IGNORE INTO prompt_versions (prompt_hash, rater, files) VALUES ('sha256:test', 'test', '[]')")  # agent labels need provenance (#35)
+    con.execute("INSERT INTO annotations (run_id, item_id, prompt_hash) VALUES (?, ?, 'sha256:test')", (run_id, sha))
     con.commit()
 
 

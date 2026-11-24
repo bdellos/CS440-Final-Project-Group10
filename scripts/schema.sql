@@ -137,6 +137,18 @@ CREATE TABLE IF NOT EXISTS runs (
 -- Annotations: one rater's judgment of one item in one run.
 -- Multi-label: the categories are rows in annotation_labels.
 -- ---------------------------------------------------------------------------
+-- Instructions an agent labeled with (#35): its .claude/agents/<rater>.md and the files of the
+-- skills it preloads, stored once per distinct hash (scripts/prompts.py). annotations.prompt_hash
+-- points here, so the exact instructions behind any label can be recovered.
+CREATE TABLE IF NOT EXISTS prompt_versions (
+    prompt_hash  TEXT PRIMARY KEY,                   -- 'sha256:' + hex, see scripts/prompts.py
+    rater        TEXT NOT NULL,
+    files        TEXT NOT NULL,                      -- JSON [{"path", "text"}], LF line endings
+    git_commit   TEXT,                               -- HEAD when first seen
+    uncommitted_changes INTEGER CHECK (uncommitted_changes IN (0, 1)),  -- files differed from git_commit
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS annotations (
     annotation_id INTEGER PRIMARY KEY,
     run_id       INTEGER NOT NULL REFERENCES runs(run_id),
@@ -202,6 +214,19 @@ CREATE TRIGGER IF NOT EXISTS categories_frozen_delete
 BEFORE DELETE ON categories
 WHEN (SELECT frozen FROM codebook_versions WHERE codebook_version_id = OLD.codebook_version_id) = 1
 BEGIN SELECT RAISE(ABORT, 'codebook version is frozen'); END;
+
+-- Agent labels must name the instructions they were made with (#35); human labels have none.
+CREATE TRIGGER IF NOT EXISTS annotations_prompt_provenance
+BEFORE INSERT ON annotations
+WHEN (SELECT rater_kind FROM runs WHERE run_id = NEW.run_id) = 'agent'
+ AND (NEW.prompt_hash IS NULL
+      OR NOT EXISTS (SELECT 1 FROM prompt_versions p WHERE p.prompt_hash = NEW.prompt_hash))
+BEGIN SELECT RAISE(ABORT, 'agent label needs a prompt_hash stored in prompt_versions (#35)'); END;
+
+CREATE TRIGGER IF NOT EXISTS annotations_no_prompt_for_humans
+BEFORE INSERT ON annotations
+WHEN (SELECT rater_kind FROM runs WHERE run_id = NEW.run_id) = 'human' AND NEW.prompt_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'human labels have no prompt_hash (#35)'); END;
 
 -- In a run with a codebook, every label must be a category of that codebook
 -- (backs up the PostToolUse validator, #32). Open-coding runs (codebook NULL) accept any label.

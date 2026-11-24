@@ -48,12 +48,21 @@ INSERT INTO "dataset_loads" VALUES(3,'data/gitskills-sample/agent_skills_sample/
 INSERT INTO "dataset_loads" VALUES(4,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
 INSERT INTO "dataset_loads" VALUES(5,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T01:28:36Z');
 INSERT INTO "dataset_loads" VALUES(6,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T02:45:14Z');
+INSERT INTO "dataset_loads" VALUES(7,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T03:22:12Z');
 CREATE TABLE evidence (
     evidence_id  INTEGER PRIMARY KEY,
     annotation_id INTEGER NOT NULL REFERENCES annotations(annotation_id),
     category_key TEXT,                               -- which label this quote supports; NULL = whole annotation
     quote        TEXT NOT NULL,                      -- verbatim, original language
     quote_en     TEXT NOT NULL                       -- English translation; equals quote for English skills (#53)
+) STRICT;
+CREATE TABLE prompt_versions (
+    prompt_hash  TEXT PRIMARY KEY,                   -- 'sha256:' + hex, see scripts/prompts.py
+    rater        TEXT NOT NULL,
+    files        TEXT NOT NULL,                      -- JSON [{"path", "text"}], LF line endings
+    git_commit   TEXT,                               -- HEAD when first seen
+    uncommitted_changes INTEGER CHECK (uncommitted_changes IN (0, 1)),  -- files differed from git_commit
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 ) STRICT;
 CREATE TABLE proposals (
     proposal_id  INTEGER PRIMARY KEY,
@@ -223,4 +232,14 @@ JOIN annotations a USING (annotation_id)
 JOIN runs r USING (run_id)
 JOIN samples s USING (sample_id)
 LEFT JOIN codebook_versions cv USING (codebook_version_id);
+CREATE TRIGGER annotations_prompt_provenance
+BEFORE INSERT ON annotations
+WHEN (SELECT rater_kind FROM runs WHERE run_id = NEW.run_id) = 'agent'
+ AND (NEW.prompt_hash IS NULL
+      OR NOT EXISTS (SELECT 1 FROM prompt_versions p WHERE p.prompt_hash = NEW.prompt_hash))
+BEGIN SELECT RAISE(ABORT, 'agent label needs a prompt_hash stored in prompt_versions (#35)'); END;
+CREATE TRIGGER annotations_no_prompt_for_humans
+BEFORE INSERT ON annotations
+WHEN (SELECT rater_kind FROM runs WHERE run_id = NEW.run_id) = 'human' AND NEW.prompt_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'human labels have no prompt_hash (#35)'); END;
 COMMIT;
