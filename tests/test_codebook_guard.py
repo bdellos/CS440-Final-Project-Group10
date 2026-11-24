@@ -138,6 +138,24 @@ def test_next_only_for_consolidator_and_unfrozen():
         decide("Bash", CONS, frozen=True, command=cmd)
 
 
+@pytest.mark.parametrize("cmd", [
+    "python scripts/codebook.py next purpose --round 2",
+    "cd repo && .venv/Scripts/python.exe -I scripts/codebook.py next context --round 1",
+    '"C:/x/.venv/Scripts/python.exe" "scripts/codebook.py" next purpose --round 2',
+])
+def test_next_is_recognised_however_python_is_called(cmd):
+    with pytest.raises(g.Blocked, match="only the codebook-consolidator"):
+        decide("Bash", None, command=cmd)
+
+
+@pytest.mark.parametrize("cmd", [
+    "git commit -m 'new versions only via `scripts/codebook.py next`'",
+    "gh issue comment 43 --body 'run scripts/codebook.py next purpose --round 3 first'",
+])
+def test_mentioning_next_in_text_is_not_running_it(cmd):
+    decide("Bash", None, command=cmd)
+
+
 # --- freeze flag and the real hook process ---------------------------------------
 
 def test_frozen_reads_labels_db(tmp_path, monkeypatch):

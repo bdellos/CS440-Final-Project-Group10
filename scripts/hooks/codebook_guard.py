@@ -38,7 +38,9 @@ CONSOLIDATOR = "codebook-consolidator"
 FILE_TOOLS = {"Write": "file_path", "Edit": "file_path", "MultiEdit": "file_path", "NotebookEdit": "notebook_path"}
 SHELL_TOOLS = {"Bash", "PowerShell"}
 VERSION_RE = re.compile(r"codebook/(purpose|context)/(?:([a-z0-9][a-z0-9-]*)/)?v\d\d\.md")
-CODEBOOK_CMD = re.compile(r"scripts[/\\]codebook\.py\s+(\w+)(.*)")
+# An actual run of the script (python ... scripts/codebook.py <cmd>), not a mention of it in text.
+CODEBOOK_CMD = re.compile(r"(?:^|[\s&|;(])[\"']?\S*python[\w.]*[\"']?\s+(?:-\S+\s+)*[\"']?(?:\S*[/\\])?"
+                          r"scripts[/\\]codebook\.py[\"']?\s+(\w+)(.*)", re.I)
 WRITE_OPS = re.compile(
     r">|\b(rm|rmdir|mv|cp|tee|touch|mkdir|truncate|dd|install|ln|chmod|patch|unzip|tar|rsync)\b|"
     r"\bsed\b[^|;&]*\s-i|\bperl\b[^|;&]*\s-[a-z]*i|\bpython\w*(\.exe)?\b[^|;&]*\s-c\b|"
