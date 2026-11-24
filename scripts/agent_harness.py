@@ -3,6 +3,7 @@
     .venv/Scripts/python scripts/agent_harness.py build                 # build fixtures, print paths
     .venv/Scripts/python scripts/agent_harness.py run labeler           # build, run the agent, check
     .venv/Scripts/python scripts/agent_harness.py check labeler <dir>   # re-check a finished run
+    .venv/Scripts/python scripts/agent_harness.py chain                 # end-to-end smoke test on fixtures (#1)
 
 Agents: open-coder, labeler, skeptic, context-classifier. (The codebook-consolidator's tool
 `codebook.py next` writes into the real codebook/ folder, so it needs a separate working copy of
@@ -182,7 +183,7 @@ def guard(p: dict) -> None:
             raise HarnessError(f"refusing: {key} path {p[key]} is real data or outside {WORK}")
 
 
-def build(workdir: Path | None = None, with_codebooks: bool = True) -> dict:
+def build(workdir: Path | None = None, with_codebooks: bool = True, repo_sample: bool = True) -> dict:
     fx = load_fixtures()
     workdir = workdir or WORK / datetime.now(timezone.utc).strftime("run-%Y%m%d-%H%M%S")
     workdir.mkdir(parents=True, exist_ok=False)
@@ -202,7 +203,8 @@ def build(workdir: Path | None = None, with_codebooks: bool = True) -> dict:
                               (name, "fixture sample for the agent test harness (#62)")).lastrowid
             con.executemany("INSERT INTO sample_items (sample_id, item_id, position, stratum) VALUES (?, ?, ?, 'fixture')",
                             [(sid, key_to_sha[k], i) for i, k in enumerate(keys, start=1)])
-    sampling.repos_of(con, "fx-repos", "fx-skills")
+    if repo_sample:  # the chain (#1) leaves this to the sampler agent instead
+        sampling.repos_of(con, "fx-repos", "fx-skills")
     if with_codebooks:
         for taxonomy in ("purpose", "context"):
             register_fixture_codebook(con, taxonomy)
@@ -246,8 +248,9 @@ def claude_bin() -> str:
     return str(cands[0])
 
 
-def start(agent: str, p: dict) -> int:
-    taxonomy, sample, cb, purpose = AGENTS[agent]
+def start(agent: str, p: dict, sample: str | None = None) -> int:
+    taxonomy, default_sample, cb, purpose = AGENTS[agent]
+    sample = sample or default_sample
     con = connect(labels_db=p["labels"], dataset_db=p["dataset"])
     try:
         return runs.start_run(con, sample, taxonomy, agent, purpose, 1 if cb else None,
@@ -256,12 +259,18 @@ def start(agent: str, p: dict) -> int:
         con.close()
 
 
-def launch(agent: str, run_id: int, p: dict, timeout: int = 1800) -> dict:
+def launch(agent: str, run_id: int | None, p: dict, timeout: int = 1800, message: str | None = None,
+           tag: str = "session") -> dict:
     write_mcp_config(p)
-    prompt = (f"This is an automated test of the `{agent}` subagent. Delegate to the `{agent}` subagent with "
-              f"exactly this message: \"Your run_id is {run_id}. Label every item in your run.\" Do not label "
-              f"anything yourself and call no pipeline or github tool except finish_run. When the subagent finishes, "
-              f"call finish_run with run_id {run_id}, then reply with the subagent's report verbatim.")
+    if message is not None:  # a non-labeling task, e.g. the sampler deriving a repo sample
+        prompt = (f"This is an automated test of the `{agent}` subagent. Delegate to the `{agent}` subagent with "
+                  f"exactly this message: \"{message}\" Do nothing else yourself. When it finishes, reply with its "
+                  f"report verbatim.")
+    else:
+        prompt = (f"This is an automated test of the `{agent}` subagent. Delegate to the `{agent}` subagent with "
+                  f"exactly this message: \"Your run_id is {run_id}. Label every item in your run.\" Do not label "
+                  f"anything yourself and call no pipeline or github tool except finish_run. When the subagent "
+                  f"finishes, call finish_run with run_id {run_id}, then reply with the subagent's report verbatim.")
     # The agent's own pinned tools (config/permissions.json), approved explicitly so the test doesn't
     # depend on settings.json being loaded; the main session itself only gets Agent.
     import permissions
@@ -271,14 +280,27 @@ def launch(agent: str, run_id: int, p: dict, timeout: int = 1800) -> dict:
     t0 = time.time()
     r = subprocess.run(cmd, cwd=ROOT, env=session_env(p), capture_output=True, text=True, timeout=timeout,
                        encoding="utf-8", errors="replace")
-    (p["workdir"] / "session.json").write_text(r.stdout or "", encoding="utf-8")
-    (p["workdir"] / "session.err").write_text(r.stderr or "", encoding="utf-8")
+    (p["workdir"] / f"{tag}.json").write_text(r.stdout or "", encoding="utf-8")
+    (p["workdir"] / f"{tag}.err").write_text(r.stderr or "", encoding="utf-8")
     if "has not been trusted" in (r.stderr or ""):
         raise HarnessError(
             "Claude Code doesn't trust this folder yet, so it ignored .claude/settings.json and the project hooks "
             "(the guards this test relies on). Run the claude CLI once interactively in the repo root and accept the "
-            "trust prompt, then rerun. Details: " + str(p["workdir"] / "session.err"))
-    return {"returncode": r.returncode, "seconds": round(time.time() - t0)}
+            "trust prompt, then rerun. Details: " + str(p["workdir"] / f"{tag}.err"))
+    return {"returncode": r.returncode, "seconds": round(time.time() - t0), "usage": _usage(r.stdout)}
+
+
+def _usage(stdout: str) -> dict:
+    """Token use of a whole session (main session and its subagent), for the caching check (#37)."""
+    try:
+        mu = json.loads(stdout or "{}").get("modelUsage") or {}
+    except ValueError:
+        return {}
+    tot = {k: sum(m.get(k, 0) for m in mu.values())
+           for k in ("inputTokens", "cacheReadInputTokens", "cacheCreationInputTokens", "outputTokens", "costUSD")}
+    seen = tot["inputTokens"] + tot["cacheReadInputTokens"] + tot["cacheCreationInputTokens"]
+    tot["cache_read_share"] = round(tot["cacheReadInputTokens"] / seen, 3) if seen else None
+    return tot
 
 
 # --- checks -------------------------------------------------------------------------------
@@ -294,13 +316,15 @@ def _records(con, run_id) -> dict:
     return out
 
 
-def check(agent: str, run_id: int, labels_db: Path, dataset_db: Path) -> list:
+def check(agent: str, run_id: int, labels_db: Path, dataset_db: Path, sample: str | None = None,
+          expect_runs: int = 1, expect_samples: int = 2) -> list:
     """[(check, ok, hard, detail)]: hard checks fail the test; soft ones are reported."""
     fx = load_fixtures()
     con = sqlite3.connect(f"{Path(labels_db).resolve().as_uri()}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     try:
-        taxonomy, sample, _, _ = AGENTS[agent]
+        taxonomy, default_sample, _, _ = AGENTS[agent]
+        sample = sample or default_sample
         recs = _records(con, run_id)
         items = [r[0] for r in con.execute(
             "SELECT item_id FROM sample_items i JOIN samples s USING (sample_id) WHERE s.name = ? ORDER BY position",
@@ -309,7 +333,7 @@ def check(agent: str, run_id: int, labels_db: Path, dataset_db: Path) -> list:
                 f"{len(recs)}/{len(items)} labeled" + (f"; missing {sorted(set(items) - set(recs))}" if set(items) - set(recs) else ""))]
         n_runs = con.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
         n_samples = con.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
-        out.append(("no extra runs or samples", n_runs == 1 and n_samples == 2, True,
+        out.append(("no extra runs or samples", n_runs == expect_runs and n_samples == expect_samples, True,
                     f"{n_runs} run(s), {n_samples} sample(s)"))
         finished = con.execute("SELECT finished_at FROM runs WHERE run_id = ?", (run_id,)).fetchone()[0]
         out.append(("run finished by the main session (#36)", finished is not None, False,
@@ -358,6 +382,85 @@ def report(results: list) -> bool:
     return ok
 
 
+# --- the end-to-end chain (#1, on fixtures) ---------------------------------------------------
+
+CHAIN_REPOS = "fx-chain-repos"
+
+
+def chain_checks(p: dict, ctx_run: int, lab_run: int, skp_run: int, usage: dict) -> list:
+    """Checks across the whole chain: the sampler's repo sample, finished runs with an agreement
+    score, and provenance on every label. Each rater's own checks come from check()."""
+    import disagreements
+    fx = load_fixtures()
+    con = connect(labels_db=p["labels"], dataset_db=p["dataset"])
+    try:
+        out = []
+        got = con.execute("SELECT s.item_kind, GROUP_CONCAT(i.item_id, '|') FROM samples s JOIN sample_items i "
+                          "USING (sample_id) WHERE s.name = ? GROUP BY s.sample_id", (CHAIN_REPOS,)).fetchone()
+        want = list(dict.fromkeys(next(s["repo"] for s in fx["skills"] if s["key"] == k) for k in fx["samples"]["fx-skills"]))
+        ok = got is not None and got[0] == "repo" and sorted(got[1].split("|")) == sorted(want)
+        out.append(("sampler derived the repo sample", ok, True, f"{CHAIN_REPOS}: {got[1] if got else 'missing'}"))
+        unfinished = [r for (r,) in con.execute("SELECT run_id FROM runs WHERE finished_at IS NULL")]
+        out.append(("every run finished (#36)", not unfinished, True, f"unfinished: {unfinished}"))
+        try:
+            s = disagreements.compare(con, lab_run, skp_run, limit=1)["summary"]
+            out.append(("labeler vs skeptic agreement computed", s["items_compared"] == len(fx["skills"]), True,
+                        f"exact agreement {s['exact_agreement']} over {s['items_compared']} items "
+                        f"({s['agree']} agree, {s['partial']} partial, {s['disjoint']} disjoint)"))
+        except disagreements.CompareError as e:
+            out.append(("labeler vs skeptic agreement computed", False, True, str(e)))
+        bad = con.execute("""SELECT COUNT(*) FROM annotations a JOIN runs r USING (run_id)
+                             LEFT JOIN prompt_versions v ON v.prompt_hash = a.prompt_hash
+                             WHERE a.prompt_hash IS NULL OR v.rater IS NOT r.rater""").fetchone()[0]
+        total = con.execute("SELECT COUNT(*) FROM annotations").fetchone()[0]
+        out.append(("provenance on every label (#35)", bad == 0 and total > 0, True,
+                    f"{total - bad}/{total} labels carry their own rater's prompt_hash"))
+        for step, u in usage.items():
+            share = u.get("cache_read_share")
+            out.append((f"prompt caching: {step} (#37)", share is not None and share >= 0.5, False,
+                        f"{share:.0%} of input read from cache, list price ${u.get('costUSD', 0):.4f}" if share is not None
+                        else "no usage reported"))
+        return out
+    finally:
+        con.close()
+
+
+def chain() -> bool:
+    """sampler -> context-classifier -> labeler -> skeptic, each in its own headless session, all on one
+    set of fixtures; then each rater's checks plus the chain checks."""
+    p = build(repo_sample=False)
+    print(f"fixtures in {p['workdir']}")
+    usage, results, ok = {}, [], True
+
+    def step(name, agent, run_id=None, message=None):
+        print(f"- {name}...", flush=True)
+        meta = launch(agent, run_id, p, message=message, tag=name)
+        usage[name] = meta["usage"]
+        print(f"  exit {meta['returncode']} after {meta['seconds']} s")
+
+    step("sampler", "sampler", message=f"Derive the repo sample of the stored skill sample fx-skills, named "
+                                       f"{CHAIN_REPOS}, for context labeling.")
+    con = connect(labels_db=p["labels"], dataset_db=p["dataset"])
+    have = con.execute("SELECT 1 FROM samples WHERE name = ?", (CHAIN_REPOS,)).fetchone()
+    con.close()
+    if not have:
+        print(f"  [FAIL] the sampler did not create {CHAIN_REPOS}; see {p['workdir'] / 'sampler.json'}")
+        return False
+    ctx = start("context-classifier", p, sample=CHAIN_REPOS)
+    step("context-classifier", "context-classifier", ctx)
+    lab = start("labeler", p)
+    step("labeler", "labeler", lab)
+    skp = start("skeptic", p)
+    step("skeptic", "skeptic", skp)
+    for agent, run_id, sample in (("context-classifier", ctx, CHAIN_REPOS), ("labeler", lab, None), ("skeptic", skp, None)):
+        print(f"{agent} (run {run_id}):")
+        ok &= report(check(agent, run_id, p["labels"], p["dataset"], sample=sample, expect_runs=3, expect_samples=2))
+    print("chain:")
+    ok &= report(chain_checks(p, ctx, lab, skp, usage))
+    (p["workdir"] / "usage.json").write_text(json.dumps(usage, indent=2), encoding="utf-8")
+    return ok
+
+
 def main():
     args = sys.argv[1:]
     if args[:1] == ["build"]:
@@ -373,6 +476,11 @@ def main():
             sys.exit(f"harness: {e}")
         print(f"session exit {meta['returncode']} after {meta['seconds']} s")
         sys.exit(0 if report(check(args[1], run_id, p["labels"], p["dataset"])) else 1)
+    elif args[:1] == ["chain"]:
+        try:
+            sys.exit(0 if chain() else 1)
+        except HarnessError as e:
+            sys.exit(f"harness: {e}")
     elif args[:1] == ["check"] and len(args) == 3 and args[1] in AGENTS:
         p = paths(Path(args[2]))
         run_id = sqlite3.connect(p["labels"]).execute("SELECT MAX(run_id) FROM runs").fetchone()[0]
