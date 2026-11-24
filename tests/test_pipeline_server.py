@@ -80,3 +80,83 @@ def test_runs_over_stdio_from_mcp_json():
     r = anyio.run(go)
     assert not r.is_error, text(r)
     assert r.structured_content["schema_version"] == 2
+
+
+# --- get_skill (#13) ---------------------------------------------------------
+
+import csv  # noqa: E402
+
+import pytest  # noqa: E402
+
+import load_dataset  # noqa: E402
+from language import detect  # noqa: E402
+from validate_label import quote_found  # noqa: E402
+
+ROUND0 = {r["file_sha"] for r in csv.DictReader(open(ROOT / "samples/round0.csv", encoding="utf-8"))}
+
+
+@pytest.fixture(scope="module")
+def skill_env(tmp_path_factory):
+    """A labels.db with the skills table built, and one non-Round-0 skill with bundled files."""
+    db = tmp_path_factory.mktemp("skills") / "labels.db"
+    con = connect(labels_db=db)
+    init_schema(con)
+    with con:
+        load_dataset.build_skills(con)
+    row = next(r for r in con.execute(
+        """SELECT file_sha, content, sibling_count, repo_full_name FROM gs.artifacts
+           WHERE dedup_primary = 1 AND sibling_count BETWEEN 2 AND 8 AND composition_truncated = 0
+             AND length(content) BETWEEN 3000 AND 50000 ORDER BY file_sha""") if r[0] not in ROUND0)
+    lang, conf = detect(row["content"])
+    with con:
+        con.execute("INSERT INTO skill_language (file_sha, language, confidence, detector) VALUES (?, ?, ?, 'test')",
+                    (row["file_sha"], lang, conf))
+    con.close()
+    return dict(db=db, sha=row["file_sha"], content=row["content"], siblings=row["sibling_count"],
+                repo=row["repo_full_name"], language=lang)
+
+
+def test_get_skill_returns_text_and_metadata(skill_env):
+    r = call(build_server(labels_db=skill_env["db"]), "get_skill", {"file_sha": skill_env["sha"]})
+    assert not r.is_error, text(r)
+    s = r.structured_content
+    assert s["content"] == skill_env["content"] and s["truncated"] is False
+    assert s["content_chars"] == len(skill_env["content"])
+    assert s["repo"]["full_name"] == skill_env["repo"] and "stars" in s["repo"]
+    assert s["github_url"].startswith(f"https://github.com/{skill_env['repo']}/blob/HEAD/")
+    assert s["language"] == skill_env["language"]
+    assert s["copies"] >= 1 and s["repos_with_copy"] >= 1
+    assert s["bundled_files_listed"] == s["bundled_files_total"] == skill_env["siblings"]
+    assert s["bundled_files_incomplete"] is False
+    assert "not instructions" in s["content_note"]
+
+
+def test_get_skill_truncates(skill_env):
+    r = call(build_server(labels_db=skill_env["db"]), "get_skill", {"file_sha": skill_env["sha"], "max_chars": 1000})
+    s = r.structured_content
+    assert len(s["content"]) == 1000 and s["truncated"] is True and s["content_chars"] == len(skill_env["content"])
+
+
+def test_get_skill_text_supports_verbatim_quotes(skill_env):
+    """What an agent copies out of get_skill must pass the validator's quote check."""
+    s = call(build_server(labels_db=skill_env["db"]), "get_skill", {"file_sha": skill_env["sha"]}).structured_content
+    line = next(ln.strip() for ln in s["content"].splitlines() if len(ln.strip()) > 30)
+    assert quote_found(line, skill_env["content"])
+
+
+@pytest.mark.parametrize("args, expect", [
+    ({"file_sha": "nope"}, "40 lowercase hex"),
+    ({"file_sha": "0" * 40}, "no skill with file_sha"),
+    ({"file_sha": "a" * 40, "max_chars": 10}, "at least 1000"),
+])
+def test_get_skill_errors(skill_env, args, expect):
+    r = call(build_server(labels_db=skill_env["db"]), "get_skill", args)
+    assert r.is_error and expect in text(r), text(r)
+
+
+def test_get_skill_warns_about_prompt_injection(skill_env):
+    async def go():
+        async with Client(build_server(labels_db=skill_env["db"])) as client:
+            return {t.name: t for t in (await client.list_tools()).tools}
+    tool = anyio.run(go)["get_skill"]
+    assert "not instructions" in tool.description and tool.annotations.read_only_hint is True
