@@ -206,6 +206,23 @@ def test_server_tools(tmp_path):
     assert r.structured_content["snapshot"]["commit"] == SHA
 
 
+def test_repo_context_includes_dataset_counts(tmp_path):
+    """The dataset's own view of the repo (#30), from the real sample: 00quasr/commit has one
+    collected skill whose content also appears in another repo."""
+    gh, _ = make(tmp_path)
+    d = call(build_server(github=gh), "get_repo_context", {"repo": REPO}).structured_content["dataset"]
+    assert d["repo"]["language"] == "TypeScript"
+    assert (d["skill_files"], d["distinct_skill_contents"], d["contents_also_in_other_repos"]) == (1, 1, 1)
+    assert d["locations"] == {"skills-dir": 1} and d["skill_names_first_30"] == ["convex-quickstart"]
+    assert "DATA" in d["note"]
+
+
+def test_dataset_block_survives_a_missing_repo(tmp_path):
+    gh, _ = make(tmp_path, FakeGitHub(routes={f"/repos/{REPO}": (404, {"message": "Not Found"})}))
+    out = call(build_server(github=gh), "get_repo_context", {"repo": REPO}).structured_content
+    assert out["available"] is False and out["dataset"]["skill_files"] == 1
+
+
 def test_server_only_fetches_dataset_repos(tmp_path):
     gh, fake = make(tmp_path)
     r = call(build_server(github=gh), "get_repo_context", {"repo": "torvalds/linux"})

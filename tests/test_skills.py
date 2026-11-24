@@ -64,6 +64,12 @@ ALLOWED_TOKENS = {
     # apply-codebook
     "get_codebook", "run", "category_keys", "text", "category", "get_sample", "run.labeled", "file_sha",
     "owner/name", "taxonomy", "version", "finish_run",
+    # repo-context-heuristics: get_repo_context fields (context isn't blind, but types are named in prose only)
+    "readme.text", "description", "topics", "is_template", "is_fork", "archived", "owner_type", "homepage",
+    "tree", "skill_md_files", "top_extensions", "paths", "commits", "total", "commits_in_90_days_before_snapshot",
+    "distinct_authors_in_last_100", "dataset", "skill_files", "contents_also_in_other_repos", "locations",
+    "skill_names_first_30", "repo", "metadata", ".claude/skills/", "md", "available", "snapshot",
+    "tree.skill_md_files", "dataset.skill_files", "field: value", "is_template: true", "skill_md_files: 240",
 }
 
 
