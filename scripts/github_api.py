@@ -18,6 +18,8 @@ It must be read-only: a fine-grained token with "Public repositories (read-only)
 classic token with no scopes. A classic/OAuth token with any write scope (repo, public_repo,
 workflow, ...), such as the one `gh auth` uses, is refused. GITHUB_TOKEN is deliberately not read.
 
+Offline: with GITHUB_OFFLINE set, only cached responses are served (agent test harness, #62).
+
 Rate limits: a limit that resets within `max_wait` seconds (default 60) is waited out;
 otherwise the call fails with the reset time, and rerunning later resumes from the cache.
 Server errors and network failures are retried with exponential backoff.
@@ -67,6 +69,10 @@ class TokenNotReadOnly(GitHubError):
     pass
 
 
+def _offline_fetch(url, headers):
+    raise GitHubError(f"GITHUB_OFFLINE is set and this response isn't cached: {url}")
+
+
 def cache_path() -> Path:
     return Path(os.environ.get("GITHUB_CACHE_DB", DEFAULT_CACHE))
 
@@ -104,10 +110,12 @@ class GitHub:
         """token=None reads GITSKILLS_GITHUB_TOKEN; pass "" for no token."""
         self.cache_db = Path(cache_db or cache_path())
         self.token = os.environ.get(TOKEN_ENV, "") if token is None else token
-        self.fetch = fetch or urllib_fetch
+        # GITHUB_OFFLINE=1: answer from the cache only, never the network (agent test harness, #62).
+        self.offline = fetch is None and bool(os.environ.get("GITHUB_OFFLINE"))
+        self.fetch = _offline_fetch if self.offline else (fetch or urllib_fetch)
         self.sleep, self.clock = sleep, clock
         self.max_wait, self.retries = max_wait, retries
-        self.token_checked = False
+        self.token_checked = self.offline  # no token check offline: there is no network
         self.rate: dict[str, Any] = {}
 
     # ---- cache -------------------------------------------------------------------------
@@ -187,6 +195,8 @@ class GitHub:
         raise GitHubError(f"GitHub request failed after {self.retries + 1} attempts ({problem}): {url}")
 
     def verify_token(self) -> dict[str, Any]:
+        if self.offline:
+            return {"offline": True, "note": "GITHUB_OFFLINE is set: cached responses only"}
         """Refuse a token that can write, and read the current rate limit. /rate_limit is free."""
         status, headers, body = self._request(f"{API}/rate_limit")
         self._check_scopes(headers)
