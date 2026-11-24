@@ -249,7 +249,9 @@ def test_missing_run(env):
 def test_already_labeled_in_run(env):
     con, rec = env["con"], skill_record(env)
     with con:
-        con.execute("INSERT INTO annotations (run_id, item_id) VALUES (?, ?)", (rec["run_id"], rec["item_id"]))
+        con.execute("INSERT OR IGNORE INTO prompt_versions (prompt_hash, rater, files) VALUES ('sha256:test', 'test', '[]')")  # agent labels need provenance (#35)
+        con.execute("INSERT INTO annotations (run_id, item_id, prompt_hash) VALUES (?, ?, 'sha256:test')",
+                    (rec["run_id"], rec["item_id"]))
     try:
         ok, e = has(errs(env, rec), "already labeled")
         assert ok, e

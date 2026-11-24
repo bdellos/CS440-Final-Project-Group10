@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import models  # noqa: E402
-from db import connect, init_schema, out_of_date  # noqa: E402
+from db import SCHEMA_VERSION, connect, init_schema, out_of_date  # noqa: E402
 
 
 # --- config ----------------------------------------------------------------
@@ -126,10 +126,11 @@ def test_migration_rebuilds_runs_and_keeps_data(tmp_path):
     con = connect(labels_db=db)
     init_schema(con)
     with con:
-        con.execute("INSERT INTO annotations (run_id, item_id) VALUES (1, 'x')")
+        con.execute("INSERT OR IGNORE INTO prompt_versions (prompt_hash, rater, files) VALUES ('sha256:test', 'test', '[]')")  # agent labels need provenance (#35)
+        con.execute("INSERT INTO annotations (run_id, item_id, prompt_hash) VALUES (1, 'x', 'sha256:test')")
     row = con.execute("SELECT rater, model, effort FROM runs WHERE run_id = 1").fetchone()
     assert tuple(row) == ("labeler", "claude-haiku-5-5", "unrecorded")  # old row kept, honestly marked
-    assert con.execute("PRAGMA main.user_version").fetchone()[0] == 2
+    assert con.execute("PRAGMA main.user_version").fetchone()[0] == SCHEMA_VERSION
     with pytest.raises(sqlite3.IntegrityError):                          # new rule applies to new rows
         con.execute("INSERT INTO runs (sample_id, taxonomy, rater_kind, rater, model, purpose) "
                     "VALUES (1, 'purpose', 'agent', 'labeler', 'claude-haiku-5-5', 'smoke')")

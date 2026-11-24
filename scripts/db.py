@@ -48,7 +48,7 @@ def connect(labels_db: Path | None = None, dataset_db: Path | None = None) -> sq
     return con
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3  # v3 (#35): prompt_versions table and prompt provenance triggers (additive)
 
 
 def _columns(con, table):

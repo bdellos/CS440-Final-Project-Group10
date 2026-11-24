@@ -4,7 +4,8 @@ Used by the MCP tool record_label (agent runs only) and, later, by imports of hu
 (which call store_label with allow_human=True from a script a person runs).
 
 What gets written for one record:
-  annotations        one row: run, item, language, notes
+  annotations        one row: run, item, language, notes, prompt_hash (agent runs, #35)
+  prompt_versions    the agent's instruction files, once per distinct hash (scripts/prompts.py)
   annotation_labels  one row per category, plus 'PROPOSED_NEW' if the record proposes categories
   evidence           one row per quote; category_key is the label's category, or
                      'PROPOSED_NEW:<proposal_id>' for a proposal's evidence
@@ -12,6 +13,7 @@ What gets written for one record:
 """
 import sqlite3
 
+import prompts
 from validate_label import validate_label
 
 
@@ -24,10 +26,11 @@ class LabelRejected(ValueError):
                          + "\n".join(f"- {e}" for e in self.errors))
 
 
-def _write(con, record) -> dict:
+def _write(con, record, prompt_hash=None) -> dict:
     annotation_id = con.execute(
-        "INSERT INTO annotations (run_id, item_id, skill_language, notes) VALUES (?, ?, ?, ?)",
-        (record["run_id"], record["item_id"], record.get("skill_language"), record.get("notes"))).lastrowid
+        "INSERT INTO annotations (run_id, item_id, skill_language, prompt_hash, notes) VALUES (?, ?, ?, ?, ?)",
+        (record["run_id"], record["item_id"], record.get("skill_language"), prompt_hash,
+         record.get("notes"))).lastrowid
     for lab in record["labels"]:
         con.execute("INSERT INTO annotation_labels (annotation_id, category_key) VALUES (?, ?)",
                     (annotation_id, lab["category"]))
@@ -54,13 +57,20 @@ def store_label(con: sqlite3.Connection, record: dict, allow_human: bool = False
     con.execute("BEGIN IMMEDIATE")  # lock first, so validation and write can't interleave with another writer
     try:
         errors = validate_label(record, con)
+        run = None
         if not errors:
-            kind = con.execute("SELECT rater_kind FROM runs WHERE run_id = ?", (record["run_id"],)).fetchone()
-            if kind and kind[0] == "human" and not allow_human:
+            run = con.execute("SELECT rater_kind, rater FROM runs WHERE run_id = ?", (record["run_id"],)).fetchone()
+            if run and run[0] == "human" and not allow_human:
                 errors = [f"run {record['run_id']} is a human run; agents can't write labels into it"]
+        phash = None
+        if not errors and run and run[0] == "agent":
+            try:
+                phash = prompts.record(con, run[1])  # provenance (#35), same transaction as the label
+            except prompts.ProvenanceError as e:
+                errors = [str(e)]
         if errors:
             raise LabelRejected(errors)
-        written = _write(con, record)
+        written = _write(con, record, phash)
         con.execute("COMMIT")
     except BaseException:
         con.execute("ROLLBACK")
@@ -70,5 +80,6 @@ def store_label(con: sqlite3.Connection, record: dict, allow_human: bool = False
                   (SELECT COUNT(*) FROM annotations WHERE run_id = ?)""",
         (record["run_id"], record["run_id"])).fetchone()
     return {"stored": True, "run_id": record["run_id"], "item_id": record["item_id"], **written,
+            "prompt_hash": phash,
             "labels": [lab["category"] for lab in record["labels"]],
             "run_progress": {"items": progress[0], "labeled": progress[1], "remaining": progress[0] - progress[1]}}

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enabledMcpjsonServers": ["pipeline", "github"],
+  "permissions": {
+    "allow": [
+      "mcp__pipeline__pipeline_status",
+      "mcp__pipeline__get_skill",
+      "mcp__pipeline__get_sample",
+      "mcp__pipeline__draw_sample",
+      "mcp__pipeline__start_run",
+      "mcp__pipeline__finish_run",
+      "mcp__pipeline__record_label",
+      "mcp__pipeline__get_disagreements",
+      "mcp__github__github_status",
+      "mcp__github__get_repo_context",
+      "Edit(/codebook/**)",
+      "Edit(/analysis/**)",
+      "Bash(.venv/Scripts/python scripts/codebook.py *)",
+      "Bash(.venv/Scripts/python scripts/models.py check)",
+      "Bash(.venv/Scripts/python scripts/permissions.py check)",
+      "Bash(.venv/Scripts/python scripts/validate_label.py *)",
+      "Bash(.venv/Scripts/python analysis/*)",
+      "Bash(.venv/Scripts/python -m pytest *)"
+    ],
+    "deny": [
+      "Edit(/labels/**)",
+      "Edit(/data/gitskills-sample/**)",
+      "Read(/data/round0/**)",
+      "Edit(/data/round0/**)",
+      "Bash(sqlite3 *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/scripts/hooks/batch_check.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/scripts/hooks/batch_check.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/scripts/hooks/session_start.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/scripts/hooks/codebook_guard.py\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/scripts/hooks/labels_guard.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__pipeline__record_label",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/scripts/hooks/rater_guard.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
