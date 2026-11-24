@@ -196,3 +196,43 @@ def test_context_classifier_checks_the_hostile_readme(built, monkeypatch):
     con.close()
     fails = hard_failures(h.check("context-classifier", run_id, built["labels"], built["dataset"]))
     assert fails == ["fx-starter/plant-starter: not redirected"]
+
+
+# --- the end-to-end chain (#1) ------------------------------------------------------------
+
+def test_chain_checks_pass_a_finished_chain_and_catch_gaps(monkeypatch):
+    monkeypatch.setattr(h, "_committed", lambda path: "0" * 40)
+    w = h.WORK / f"pytest-{uuid.uuid4().hex[:8]}"
+    p = h.build(w, repo_sample=False)
+    try:
+        for k, v in h.session_env(p).items():
+            if k in ("GITSKILLS_DB", "LABELS_DB", "GITHUB_CACHE_DB", "GITHUB_OFFLINE"):
+                monkeypatch.setenv(k, v)
+        con = con_of(p)
+        import sampling
+        sampling.repos_of(con, h.CHAIN_REPOS, "fx-skills")     # what the sampler agent does
+        ctx = h.start("context-classifier", p, sample=h.CHAIN_REPOS)
+        for r in FX["repos"]:
+            q = r["description"]
+            labeling.store_label(con, {"schema_version": 1, "run_id": ctx, "item_kind": "repo", "item_id": r["full_name"],
+                                       "taxonomy": "context", "codebook_version": 1, "proposals": [],
+                                       "labels": [{"category": r["expect"], "evidence": [{"quote": q, "quote_en": q}]}]})
+        con.close()
+        lab = label_skills(p, "labeler", lambda k: [SKILL[k]["expect"]])
+        skp = label_skills(p, "skeptic", lambda k: ["cat-a"] if k == "make-pesto" else [SKILL[k]["expect"]])
+        usage = {"labeler": {"cache_read_share": 0.9, "costUSD": 0.01}}
+        con = con_of(p)
+        for run_id in (ctx, lab):
+            runs.finish_run(con, run_id)
+        con.close()
+        fails = hard_failures(h.chain_checks(p, ctx, lab, skp, usage))
+        assert fails == ["every run finished (#36)"]           # the skeptic's run is still open
+        con = con_of(p)
+        runs.finish_run(con, skp)
+        con.close()
+        results = h.chain_checks(p, ctx, lab, skp, usage)
+        assert hard_failures(results) == []
+        agreement = next(r for r in results if r[0] == "labeler vs skeptic agreement computed")
+        assert "exact agreement 0.8333 over 6 items" in agreement[3]   # 5 of 6 agree (make-pesto differs)
+    finally:
+        shutil.rmtree(w, ignore_errors=True)
