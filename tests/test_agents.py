@@ -71,6 +71,19 @@ def test_open_coder_is_blind_by_construction():
     assert prompts._list_field(path.read_text(encoding="utf-8"), "skills") == ["qualitative-coding-protocol"]
 
 
+def test_labeler_applies_the_codebook_independently():
+    path = AGENTS / "labeler.md"
+    import prompts
+    assert prompts._list_field(path.read_text(encoding="utf-8"), "skills") == [
+        "qualitative-coding-protocol", "apply-codebook"]
+    tools = set(permissions.agent_tools(path))
+    assert {"mcp__pipeline__get_codebook", "mcp__pipeline__record_label"} <= tools
+    text = body(path)
+    assert "Call `get_codebook` with it first" in text
+    assert "Never start, finish or switch runs yourself" in text
+    assert "reply with numbers only" in text and "Do not list the labels you gave" in text
+
+
 def test_sampler_draws_once_after_a_dry_run():
     text = body(AGENTS / "sampler.md")
     assert "dry_run: true" in text and "dry_run: false" in text

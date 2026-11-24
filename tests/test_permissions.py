@@ -44,8 +44,11 @@ def test_no_agent_gets_main_session_tools_or_agent_spawning():
 
 
 def test_raters_cannot_see_other_raters_labels():
+    """No get_disagreements, and no file tools: labels/dump.sql holds every stored label."""
     for name in ("labeler", "skeptic", "open-coder", "context-classifier"):
-        assert "mcp__pipeline__get_disagreements" not in CFG["agents"][name]["tools"], name
+        tools = set(CFG["agents"][name]["tools"])
+        assert "mcp__pipeline__get_disagreements" not in tools, name
+        assert not tools & {"Read", "Glob", "Grep", "Bash", "Write", "Edit", "NotebookEdit"}, name
 
 
 def test_missing_agent_files_are_notes(tmp_path):
@@ -72,10 +75,10 @@ def test_missing_tools_line_is_an_error(tmp_path):
 
 
 def test_extra_and_missing_tools_are_reported(tmp_path):
-    tools = [t for t in CFG["agents"]["skeptic"]["tools"] if t != "Read"] + ["mcp__pipeline__get_disagreements"]
+    tools = [t for t in CFG["agents"]["skeptic"]["tools"] if t != "mcp__pipeline__get_sample"] + ["mcp__pipeline__get_disagreements"]
     agent_file(tmp_path, "skeptic", "tools: " + ", ".join(tools))
     problems, _ = run(tmp_path)
-    assert any("missing tools from config: Read" in p for p in problems)
+    assert any("missing tools from config: mcp__pipeline__get_sample" in p for p in problems)
     assert any("not in config/permissions.json: mcp__pipeline__get_disagreements" in p for p in problems)
 
 
