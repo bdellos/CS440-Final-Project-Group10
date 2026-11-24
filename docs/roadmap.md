@@ -44,7 +44,7 @@ Round 0 is blind. Don't run the open-coder or the labeler until [#3](https://git
 
 ### 7. Round 0
 - [#39](https://github.com/bdellos/CS440-Final-Project-Group10/issues/39) agent open-codes the sample (can start once [#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3) is done; keep the output away from Ryan until [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4) is done)
-- [#40](https://github.com/bdellos/CS440-Final-Project-Group10/issues/40) compare the three category lists and build codebook v01 (needs [#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3), [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4) and [#39](https://github.com/bdellos/CS440-Final-Project-Group10/issues/39))
+- [#40](https://github.com/bdellos/CS440-Final-Project-Group10/issues/40) compare the three category lists and build codebook v01 (needs [#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3), [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4) [#39](https://github.com/bdellos/CS440-Final-Project-Group10/issues/39) and [#64](https://github.com/bdellos/CS440-Final-Project-Group10/issues/64), the consolidator's harness test, which can be done any time before)
 - [#41](https://github.com/bdellos/CS440-Final-Project-Group10/issues/41) context taxonomy codebook (can run in parallel with the rest of Round 0)
 
 ### 8. Iterate to saturation
