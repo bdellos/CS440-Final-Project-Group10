@@ -17,7 +17,7 @@ Plan: keep the GitSkills SQLite file read-only and `ATTACH` it from a small proj
 - [#18](https://github.com/bdellos/CS440-Final-Project-Group10/issues/18) pin model and temperature
 
 ### 3. MCP servers
-- [#11](https://github.com/bdellos/CS440-Final-Project-Group10/issues/11) custom server scaffold → [#13](https://github.com/bdellos/CS440-Final-Project-Group10/issues/13) `get_skill` → [#12](https://github.com/bdellos/CS440-Final-Project-Group10/issues/12) `sample` → [#14](https://github.com/bdellos/CS440-Final-Project-Group10/issues/14) `record_label` → [#15](https://github.com/bdellos/CS440-Final-Project-Group10/issues/15) `get_disagreements`
+- [#11](https://github.com/bdellos/CS440-Final-Project-Group10/issues/11) custom server scaffold → [#13](https://github.com/bdellos/CS440-Final-Project-Group10/issues/13) `get_skill` → [#12](https://github.com/bdellos/CS440-Final-Project-Group10/issues/12) `sample` → [#58](https://github.com/bdellos/CS440-Final-Project-Group10/issues/58) `start_run` / `finish_run` → [#14](https://github.com/bdellos/CS440-Final-Project-Group10/issues/14) `record_label` → [#15](https://github.com/bdellos/CS440-Final-Project-Group10/issues/15) `get_disagreements`
 - [#10](https://github.com/bdellos/CS440-Final-Project-Group10/issues/10) GitHub MCP (read-only, with caching)
 - [#9](https://github.com/bdellos/CS440-Final-Project-Group10/issues/9) SQLite MCP. May be unnecessary if the custom server covers every read the agents need; decide after this step.
 
