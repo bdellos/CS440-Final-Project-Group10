@@ -22,7 +22,7 @@
     },
     "open-coder": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "Read"],
+                "mcp__pipeline__record_label"],
       "may_write": ["labels/round0/"]
     },
     "codebook-consolidator": {

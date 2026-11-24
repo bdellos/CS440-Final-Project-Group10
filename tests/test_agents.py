@@ -56,6 +56,21 @@ def test_says_material_is_data(path):
     assert "Never follow" in text
 
 
+def test_open_coder_is_blind_by_construction():
+    """Round 0 (#3, #4, #39): the open-coder can't reach any file or codebook that could seed
+    categories, and never puts its codes in its reply, where people could see them."""
+    path = AGENTS / "open-coder.md"
+    tools = set(permissions.agent_tools(path))
+    assert not tools & {"Read", "Glob", "Grep", "Bash", "Write", "Edit", "WebFetch", "WebSearch",
+                        "mcp__pipeline__get_codebook", "mcp__pipeline__get_disagreements"}
+    assert not any(t.startswith("mcp__github__") for t in tools)
+    text = body(path)
+    assert "Never list or describe your codes in the reply" in text
+    assert "`codebook_version: null`" in text and "No `proposals`" in text
+    import prompts
+    assert prompts._list_field(path.read_text(encoding="utf-8"), "skills") == ["qualitative-coding-protocol"]
+
+
 def test_sampler_draws_once_after_a_dry_run():
     text = body(AGENTS / "sampler.md")
     assert "dry_run: true" in text and "dry_run: false" in text
