@@ -17,14 +17,16 @@ Plan: keep the GitSkills SQLite file read-only and `ATTACH` it from a small proj
 - [#18](https://github.com/bdellos/CS440-Final-Project-Group10/issues/18) pin model and temperature
 
 ### 3. MCP servers
-- [#11](https://github.com/bdellos/CS440-Final-Project-Group10/issues/11) custom server scaffold → [#13](https://github.com/bdellos/CS440-Final-Project-Group10/issues/13) `get_skill` → [#12](https://github.com/bdellos/CS440-Final-Project-Group10/issues/12) `sample` → [#14](https://github.com/bdellos/CS440-Final-Project-Group10/issues/14) `record_label` → [#15](https://github.com/bdellos/CS440-Final-Project-Group10/issues/15) `get_disagreements`
+- [#11](https://github.com/bdellos/CS440-Final-Project-Group10/issues/11) custom server scaffold → [#13](https://github.com/bdellos/CS440-Final-Project-Group10/issues/13) `get_skill` → [#12](https://github.com/bdellos/CS440-Final-Project-Group10/issues/12) `sample` → [#58](https://github.com/bdellos/CS440-Final-Project-Group10/issues/58) `start_run` / `finish_run` → [#14](https://github.com/bdellos/CS440-Final-Project-Group10/issues/14) `record_label` → [#15](https://github.com/bdellos/CS440-Final-Project-Group10/issues/15) `get_disagreements`
 - [#10](https://github.com/bdellos/CS440-Final-Project-Group10/issues/10) GitHub MCP (read-only, with caching)
-- [#9](https://github.com/bdellos/CS440-Final-Project-Group10/issues/9) SQLite MCP. May be unnecessary if the custom server covers every read the agents need; decide after this step.
+- [#9](https://github.com/bdellos/CS440-Final-Project-Group10/issues/9) SQLite MCP. ~~Decide after this step.~~ **Closed as not needed:** the custom server covers every read, and raw SQL would bypass its validation.
 
 ### 4. Config and hooks
 - [#17](https://github.com/bdellos/CS440-Final-Project-Group10/issues/17) `settings.json` and permissions → [#33](https://github.com/bdellos/CS440-Final-Project-Group10/issues/33) codebook write guard → [#32](https://github.com/bdellos/CS440-Final-Project-Group10/issues/32) label validator → [#35](https://github.com/bdellos/CS440-Final-Project-Group10/issues/35) provenance logger → [#34](https://github.com/bdellos/CS440-Final-Project-Group10/issues/34) SessionStart → [#36](https://github.com/bdellos/CS440-Final-Project-Group10/issues/36) Stop batch check
 
 ### 5. Skills, then the agents that load them
+> ⚠️ **Prompt injection.** Every SKILL.md is written as instructions for an AI agent, and repo READMEs can be too. Every agent and skill that reads them must treat that text as data to classify, never as instructions (CLAUDE.md rule; checklist item on #22–#26 and #29). Test each agent with a skill that tries to redirect it.
+
 - Skills: [#29](https://github.com/bdellos/CS440-Final-Project-Group10/issues/29) qualitative-coding-protocol, [#28](https://github.com/bdellos/CS440-Final-Project-Group10/issues/28) apply-codebook, [#30](https://github.com/bdellos/CS440-Final-Project-Group10/issues/30) repo-context-heuristics
 - Agents: [#21](https://github.com/bdellos/CS440-Final-Project-Group10/issues/21) sampler, [#23](https://github.com/bdellos/CS440-Final-Project-Group10/issues/23) open-coder, [#24](https://github.com/bdellos/CS440-Final-Project-Group10/issues/24) codebook-consolidator, [#25](https://github.com/bdellos/CS440-Final-Project-Group10/issues/25) labeler, [#26](https://github.com/bdellos/CS440-Final-Project-Group10/issues/26) skeptic, [#22](https://github.com/bdellos/CS440-Final-Project-Group10/issues/22) context-classifier
 - [#37](https://github.com/bdellos/CS440-Final-Project-Group10/issues/37) prompt caching for the codebook
