@@ -12,6 +12,8 @@
       "mcp__pipeline__record_label",
       "mcp__pipeline__get_disagreements",
       "mcp__pipeline__get_codebook",
+      "mcp__pipeline__get_codes",
+      "mcp__pipeline__get_proposals",
       "mcp__github__github_status",
       "mcp__github__get_repo_context",
       "Edit(/codebook/**)",

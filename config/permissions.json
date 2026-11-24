@@ -27,7 +27,8 @@
       "may_write": ["labels/round0/"]
     },
     "codebook-consolidator": {
-      "tools": ["mcp__pipeline__pipeline_status", "Read", "Glob", "Grep", "Write", "Edit", "Bash"],
+      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_codes", "mcp__pipeline__get_proposals",
+                "Read", "Edit", "Bash"],
       "may_write": ["codebook/"]
     },
     "labeler": {

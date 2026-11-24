@@ -103,6 +103,18 @@ def test_skeptic_is_an_independent_sceptical_second_rater(monkeypatch):
         prompts.prompt_hash(prompts.instruction_files("labeler"))
 
 
+def test_consolidator_works_only_through_next_and_its_tools():
+    path = AGENTS / "codebook-consolidator.md"
+    tools = set(permissions.agent_tools(path))
+    assert {"mcp__pipeline__get_codes", "mcp__pipeline__get_proposals", "Edit", "Bash"} <= tools
+    assert not tools & {"Write", "Glob", "Grep", "mcp__pipeline__record_label", "mcp__pipeline__get_skill"}
+    text = body(path)
+    for rule in ("codebook.py next <taxonomy> --round <N>", "Keys are permanent", "Nothing invented",
+                 "<!-- sources:", "<!-- unplaced:", "If any proposal for this taxonomy is still pending, stop",
+                 "resulting_version_id", "codebook.py check", "after the researchers say Round 0 coding is complete"):
+        assert rule in text, rule
+
+
 def test_sampler_draws_once_after_a_dry_run():
     text = body(AGENTS / "sampler.md")
     assert "dry_run: true" in text and "dry_run: false" in text
