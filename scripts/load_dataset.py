@@ -4,7 +4,8 @@ The dataset itself stays read-only and attached (see db.py). Loading means:
   1. create or upgrade the schema;
   2. rebuild the `skills` sampling frame with one scan of gs.artifacts;
   3. record the dataset file and counts in `dataset_loads`;
-  4. register the Round 0 sample from samples/round0.csv.
+  4. register the Round 0 sample from samples/round0.csv;
+  5. detect the language of skills that don't have one yet (detect_languages.py, #52).
 
     .venv/Scripts/python scripts/load_dataset.py
     GITSKILLS_DB=path/to/full.db .venv/Scripts/python scripts/load_dataset.py   # full dataset
@@ -16,6 +17,7 @@ import datetime as dt
 import sys
 import time
 
+import detect_languages
 from db import ROOT, connect, dataset_path, init_schema
 
 ROUND0_CSV = ROOT / "samples/round0.csv"
@@ -89,7 +91,7 @@ def register_round0(con):
     print(f"  round0: registered {len(rows)} skills")
 
 
-def main():
+def main(skip_language=False):
     t0 = time.perf_counter()
     con = connect()
     init_schema(con)
@@ -99,8 +101,17 @@ def main():
         artifacts, repos = record_load(con, n)
         print(f"  skills: {n:,} distinct ({artifacts:,} file occurrences, {repos:,} repos)")
         register_round0(con)
+    if skip_language:
+        print("  language: skipped (--skip-language); run scripts/detect_languages.py later")
+    else:
+        # Outside the transaction above: it commits in batches so a long run can resume.
+        detect_languages.run(con)
     print(f"done in {time.perf_counter() - t0:.1f}s")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--skip-language", action="store_true",
+                   help="don't run language detection (~25 min on the full dataset)")
+    main(p.parse_args().skip_language)

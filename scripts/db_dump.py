@@ -18,8 +18,9 @@ from db import ROOT, labels_path
 
 DUMP = ROOT / "labels/dump.sql"
 
-# Rebuilt from the dataset by load_dataset.py; ~1.9M rows on the full dataset, so not in git.
-DERIVED = ("skills",)
+# Rebuilt from the dataset by load_dataset.py; ~1.9M rows each on the full dataset, so not in git.
+# skill_language is deterministic (seeded detector) and takes ~25 min to rebuild on the full set.
+DERIVED = ("skills", "skill_language")
 
 
 def dump() -> None:

@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS dataset_loads (
     loaded_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 ) STRICT;
 
+-- Separate from `skills` so it survives the loader's rebuild of that table:
+-- detection is incremental (scripts/detect_languages.py) and re-runs only when the detector changes.
 CREATE TABLE IF NOT EXISTS skill_language (          -- populated by #52
     file_sha     TEXT PRIMARY KEY,
     language     TEXT NOT NULL,                      -- 'en', 'zh', 'mixed', 'unknown', ...
@@ -218,6 +220,11 @@ BEGIN SELECT RAISE(ABORT, 'category not in this run''s codebook'); END;
 CREATE INDEX IF NOT EXISTS annotations_item ON annotations(item_id);
 CREATE INDEX IF NOT EXISTS evidence_annotation ON evidence(annotation_id);
 CREATE INDEX IF NOT EXISTS proposals_status ON proposals(status);
+
+-- Sampling frame with language, for the sampler (#21). language is NULL until detected.
+CREATE VIEW IF NOT EXISTS skills_with_language AS
+SELECT s.*, l.language, l.confidence AS language_confidence
+FROM skills s LEFT JOIN skill_language l USING (file_sha);
 
 -- Flat view for analysis: one row per (run, item, category).
 CREATE VIEW IF NOT EXISTS label_rows AS

@@ -202,6 +202,20 @@ def build_workbook(sample, coder, path):
 
 
 def main():
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--force", action="store_true",
+                   help="overwrite existing coding workbooks (they may contain someone's coding)")
+    force = p.parse_args().force
+
+    outs = [OUT_DIR / f"Round0_Coding_{coder}.xlsx" for coder in CODERS]
+    existing = [o for o in outs if o.exists()]
+    if existing and not force:
+        raise SystemExit(
+            "refusing to overwrite coding workbooks that may already hold coding:\n  "
+            + "\n  ".join(str(o.relative_to(ROOT)) for o in existing)
+            + "\nmove them aside, or pass --force if they are blank")
+
     sample = draw_sample()
 
     SAMPLE_CSV.parent.mkdir(parents=True, exist_ok=True)
@@ -212,8 +226,7 @@ def main():
             w.writerow([f"S{i:02d}", r["repo_full_name"], r["path"], r["file_sha"], r["name"], r["body_chars"], q])
     print(f"wrote {SAMPLE_CSV.relative_to(ROOT)}")
 
-    for coder in CODERS:
-        out = OUT_DIR / f"Round0_Coding_{coder}.xlsx"
+    for coder, out in zip(CODERS, outs):
         build_workbook(sample, coder, out)
         print(f"wrote {out.relative_to(ROOT)}")
 

@@ -44,6 +44,8 @@ CREATE TABLE dataset_loads (
 ) STRICT;
 INSERT INTO "dataset_loads" VALUES(1,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:20:23Z');
 INSERT INTO "dataset_loads" VALUES(2,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:20:24Z');
+INSERT INTO "dataset_loads" VALUES(3,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
+INSERT INTO "dataset_loads" VALUES(4,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
 CREATE TABLE evidence (
     evidence_id  INTEGER PRIMARY KEY,
     annotation_id INTEGER NOT NULL REFERENCES annotations(annotation_id),
@@ -207,4 +209,7 @@ LEFT JOIN codebook_versions cv USING (codebook_version_id);
 CREATE INDEX skills_sampling ON skills(frontmatter_valid, body_chars);
 CREATE INDEX skills_repo ON skills(repo_full_name);
 CREATE INDEX skills_name ON skills(name_key);
+CREATE VIEW skills_with_language AS
+SELECT s.*, l.language, l.confidence AS language_confidence
+FROM skills s LEFT JOIN skill_language l USING (file_sha);
 COMMIT;
