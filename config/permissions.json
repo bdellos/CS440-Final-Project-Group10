@@ -4,38 +4,40 @@
     "scripts/permissions.py check: .claude/agents/<name>.md must list exactly these tools in its `tools:` frontmatter.",
     "An agent file without `tools:` inherits every tool (start_run, finish_run, every MCP server), so `tools:` is required.",
     "No agent gets `Agent`: a subagent can spawn its own subagents, which would escape this list.",
+    "Raters (open-coder, labeler, skeptic, context-classifier) get no file tools and no get_disagreements: labels/dump.sql holds every stored label, so `Read` would let a rater see other raters' labels.",
     "Only the main session starts and finishes runs: it calls start_run, hands the run_id to the agent it delegates to, and calls finish_run after.",
     "`may_write` mirrors the 'May write' column in CLAUDE.md; hooks (#33) use it. Agents with Write/Edit/Bash rely on those hooks and settings.json for path limits, since `tools:` can't hold path rules."
   ],
   "main_session_only": ["mcp__pipeline__start_run", "mcp__pipeline__finish_run", "Agent"],
   "agents": {
     "sampler": {
-      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__draw_sample", "mcp__pipeline__get_sample",
-                "mcp__pipeline__get_skill"],
+      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__draw_sample", "mcp__pipeline__derive_repo_sample",
+                "mcp__pipeline__get_sample", "mcp__pipeline__get_skill"],
       "may_write": ["data/"]
     },
     "context-classifier": {
-      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "mcp__github__github_status", "mcp__github__get_repo_context", "Read"],
+      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_codebook", "mcp__pipeline__record_label", "mcp__github__github_status",
+                "mcp__github__get_repo_context"],
       "may_write": ["labels/"]
     },
     "open-coder": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "Read"],
+                "mcp__pipeline__record_label"],
       "may_write": ["labels/round0/"]
     },
     "codebook-consolidator": {
-      "tools": ["mcp__pipeline__pipeline_status", "Read", "Glob", "Grep", "Write", "Edit", "Bash"],
+      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_codes", "mcp__pipeline__get_proposals",
+                "Read", "Edit", "Bash"],
       "may_write": ["codebook/"]
     },
     "labeler": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "Read"],
+                "mcp__pipeline__get_codebook", "mcp__pipeline__record_label"],
       "may_write": ["labels/"]
     },
     "skeptic": {
       "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__record_label", "Read"],
+                "mcp__pipeline__get_codebook", "mcp__pipeline__record_label"],
       "may_write": ["labels/"]
     },
     "analyst": {

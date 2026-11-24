@@ -140,6 +140,44 @@ def draw(con, name: str, n: int, seed: int, stratify_by: str = "length", english
     return result
 
 
+def repos_of(con, name: str, skill_sample: str, dry_run: bool = False) -> dict:
+    """A repo sample for context labeling (#22): the repositories of the skills in a stored skill
+    sample, in the same order, so every purpose-labeled skill gets a context label for its repo
+    (the purpose x context cross-tab, #50). A skill's repo is its representative copy's repo
+    (skills.repo_full_name). Each item's stratum records the skill it came from."""
+    if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name or ""):
+        raise SampleError(f"name must be a lowercase slug like 'round1-repos', got {name!r}")
+    if con.execute("SELECT 1 FROM samples WHERE name = ?", (name,)).fetchone():
+        raise SampleError(f"a sample named {name!r} already exists; samples are frozen, pick a new name")
+    src = con.execute("SELECT sample_id, item_kind FROM samples WHERE name = ?", (skill_sample,)).fetchone()
+    if src is None:
+        raise SampleError(f"no sample named {skill_sample!r}")
+    if src[1] != "skill":
+        raise SampleError(f"{skill_sample!r} is a {src[1]} sample; derive repo samples from skill samples")
+    rows = con.execute(
+        """SELECT i.item_id AS file_sha, k.repo_full_name FROM sample_items i JOIN skills k ON k.file_sha = i.item_id
+           WHERE i.sample_id = ? ORDER BY i.position""", (src[0],)).fetchall()
+    items, seen = [], set()
+    for r in rows:
+        if r["repo_full_name"] in seen:
+            continue
+        seen.add(r["repo_full_name"])
+        items.append({"position": len(items) + 1, "repo": r["repo_full_name"], "from_skill": r["file_sha"]})
+    method = (f"repositories of the skills in sample '{skill_sample}' (the representative copy's repo), in the "
+              f"same order, one per repository. scripts/sampling.py")
+    result = {"name": name, "item_kind": "repo", "from_sample": skill_sample, "n": len(items), "method": method,
+              "skills_in_source": len(rows), "items": items, "stored": False}
+    if dry_run:
+        return result
+    with con:
+        sid = con.execute("INSERT INTO samples (name, item_kind, method, seed) VALUES (?, 'repo', ?, NULL)",
+                          (name, method)).lastrowid
+        con.executemany("INSERT INTO sample_items (sample_id, item_id, position, stratum) VALUES (?, ?, ?, ?)",
+                        [(sid, it["repo"], it["position"], f"skill:{it['from_skill']}") for it in items])
+    result["stored"] = True
+    return result
+
+
 def get(con, name: str, offset: int = 0, limit: int = 500) -> dict:
     s = con.execute("SELECT sample_id, name, item_kind, method, seed, created_at FROM samples WHERE name = ?",
                     (name,)).fetchone()

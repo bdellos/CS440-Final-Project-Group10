@@ -37,16 +37,16 @@ Each subagent gets one narrow job, limited tools and a fixed output format.
 | Open coder | Round 0 only: free-form codes, each with an evidence quote | Read-only |
 | Codebook consolidator | Merges synonyms, keeps granularity consistent, writes definition, include/exclude rules and examples per category | Only agent allowed to write the codebook |
 | Labeler | Applies the frozen codebook and emits schema-valid JSON | Read skill, write labels |
-| Skeptic / second rater | Labels independently or argues against the Labeler; disagreements go to us | Read-only |
+| Skeptic / second rater | Labels the same skills independently, in its own run, with a sceptical reading of each category; never sees the Labeler's labels; disagreements go to us | Pipeline tools only, no files |
 | Analyst | Cross-tabs, frequencies, charts, agreement stats | Python, DB |
 
-The Skeptic is cheap and yields agent-vs-agent disagreement data for the threats-to-validity section.
+The Skeptic is cheap and yields agent-vs-agent disagreement data for the threats-to-validity section. It labels independently rather than arguing against the Labeler's output (decided in #26), so the two runs stay independent ratings that can be compared directly (agreement on `finish_run`, item by item with `get_disagreements`). It uses the same model, codebook and skills as the Labeler but a sceptical stance: it weighs the strongest rival category, applies Exclude rules strictly and adds second labels only on clear evidence. Without that difference the two runs would only measure the model's run-to-run variation; with it, disagreement points at fragile category boundaries.
 
 ## Skills
 
 Using skills to study skills is a nice meta angle for the write-up.
 
-- **`apply-codebook`**: SKILL.md holds the labeling procedure; the codebook is a reference file inside the skill, so a new version is a file swap.
+- **`apply-codebook`**: SKILL.md holds the labeling procedure. The codebook itself is not copied into the skill: the agent calls `get_codebook(run_id)`, which returns the exact version its run was started with, read from the commit it was registered at (decided in #28, so a copy can never drift from the run).
 - **`qualitative-coding-protocol`**: how to quote evidence, when to multi-label, when to use `PROPOSED_NEW`.
 - **`repo-context-heuristics`**: signals per repo type, e.g. a `skills/` folder with 40+ unrelated skills and no app code means a catalog.
 - **`msr-report`**: the format for the paper's tables and figures.

@@ -138,10 +138,29 @@ def check_shell(command: str, agent: str | None, cwd: str | None = None, *, is_f
                           f"Blocked: {part.strip()[:200]}")
 
 
+def confine_consolidator(tool: str, args: dict, cwd: str | None) -> None:
+    """The consolidator works only on codebook version files (#24): no file writes elsewhere, and
+    no shell command except running `codebook.py check` / `codebook.py next`."""
+    if tool in FILE_TOOLS:
+        rel = rel_path(args.get(FILE_TOOLS[tool]) or "", cwd)
+        if not in_codebook(rel):
+            raise Blocked(f"the codebook-consolidator may only edit codebook version files, not {rel or args}.")
+    elif tool in SHELL_TOOLS:
+        command = args.get("command") or ""
+        parts = [p for p in re.split(r"&&|\|\||;|\n|\|", command) if p.strip()]
+        for part in parts or [""]:
+            m = CODEBOOK_CMD.search(part)
+            if not m or m.group(1) not in ("check", "next") or re.search(r"[<>`$]", part):
+                raise Blocked("the codebook-consolidator may only run `.venv/Scripts/python scripts/codebook.py "
+                              f"check` or `... next <taxonomy> --round N`. Blocked: {command.strip()[:200]}")
+
+
 def decide(event: dict, *, is_frozen=frozen, is_committed=committed, root=ROOT) -> None:
     """Raise Blocked if the tool call must not run."""
     tool, args = event.get("tool_name"), event.get("tool_input") or {}
     agent, cwd = event.get("agent_type"), event.get("cwd")
+    if agent == CONSOLIDATOR:
+        confine_consolidator(tool, args, cwd)
     if tool in FILE_TOOLS:
         rel = rel_path(args.get(FILE_TOOLS[tool]) or "", cwd)
         if in_codebook(rel):

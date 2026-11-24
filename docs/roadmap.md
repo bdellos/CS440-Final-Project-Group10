@@ -29,6 +29,7 @@ Plan: keep the GitSkills SQLite file read-only and `ATTACH` it from a small proj
 
 - Skills: [#29](https://github.com/bdellos/CS440-Final-Project-Group10/issues/29) qualitative-coding-protocol, [#28](https://github.com/bdellos/CS440-Final-Project-Group10/issues/28) apply-codebook, [#30](https://github.com/bdellos/CS440-Final-Project-Group10/issues/30) repo-context-heuristics
 - Agents: [#21](https://github.com/bdellos/CS440-Final-Project-Group10/issues/21) sampler, [#23](https://github.com/bdellos/CS440-Final-Project-Group10/issues/23) open-coder, [#24](https://github.com/bdellos/CS440-Final-Project-Group10/issues/24) codebook-consolidator, [#25](https://github.com/bdellos/CS440-Final-Project-Group10/issues/25) labeler, [#26](https://github.com/bdellos/CS440-Final-Project-Group10/issues/26) skeptic, [#22](https://github.com/bdellos/CS440-Final-Project-Group10/issues/22) context-classifier
+- [#62](https://github.com/bdellos/CS440-Final-Project-Group10/issues/62) agent test harness: runs each agent against fixture skills (including hostile ones) in a separate session, never on real data. Holds every agent's prompt-injection test, and lets the open-coder be tested before Round 0 is done.
 - [#37](https://github.com/bdellos/CS440-Final-Project-Group10/issues/37) prompt caching for the codebook
 
 ### 6. Prove it works

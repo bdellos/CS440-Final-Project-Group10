@@ -121,7 +121,42 @@ def test_harmless_shell_commands_pass(cmd):
 ])
 def test_shell_writes_are_blocked_for_everyone(cmd):
     with pytest.raises(g.Blocked, match="may not write to codebook"):
+        decide("Bash", None, command=cmd)
+    with pytest.raises(g.Blocked, match="may only run"):  # the consolidator is stopped earlier (#24)
         decide("Bash", CONS, command=cmd)
+
+
+# --- consolidator confinement (#24) ---------------------------------------------------
+
+@pytest.mark.parametrize("cmd", [
+    ".venv/Scripts/python scripts/codebook.py check",
+    ".venv/Scripts/python scripts/codebook.py next purpose --round 3",
+    ".venv/Scripts/python scripts/codebook.py next purpose --round 1 && .venv/Scripts/python scripts/codebook.py check",
+])
+def test_consolidator_may_run_check_and_next(cmd):
+    decide("Bash", CONS, command=cmd)
+
+
+@pytest.mark.parametrize("cmd", [
+    "ls",
+    "git commit -am 'codebook v02'",
+    "cat labels/dump.sql",
+    ".venv/Scripts/python scripts/codebook.py register codebook/purpose/v01.md",
+    ".venv/Scripts/python scripts/codebook.py check > /tmp/out",
+    ".venv/Scripts/python scripts/codebook.py check | tee x",
+    ".venv/Scripts/python scripts/codebook.py next purpose --round $(rm -rf .)",
+    ".venv/Scripts/python scripts/runs.py finish 3",
+])
+def test_consolidator_shell_is_confined(cmd):
+    with pytest.raises(g.Blocked, match="may only run"):
+        decide("Bash", CONS, command=cmd)
+
+
+def test_consolidator_cannot_write_outside_codebook(repo):
+    for path in ("scripts/x.py", "CLAUDE.md", ".claude/agents/codebook-consolidator.md", "labels/dump.sql"):
+        with pytest.raises(g.Blocked, match="may only edit codebook version files"):
+            decide("Edit", CONS, tmp=repo, file_path=path)
+    decide("Edit", CONS, tmp=repo, file_path=NEW)  # its own uncommitted version file is still fine
 
 
 def test_powershell_writes_are_blocked():

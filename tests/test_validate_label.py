@@ -141,13 +141,26 @@ def test_valid_proposal_only(env):
     assert errs(env, rec) == []
 
 
-def test_valid_repo_context_record(env):
-    rec = {"schema_version": 1, "run_id": env["runs"]["context"], "item_kind": "repo", "item_id": env["repo"],
-           "taxonomy": "context", "codebook_version": 1,
-           "labels": [{"category": "catalog", "evidence": [{"quote": "skills/ holds 40 unrelated skills",
-                                                             "quote_en": "skills/ holds 40 unrelated skills"}]}],
-           "proposals": []}
-    assert errs(env, rec) == []
+def repo_record(env, quote):
+    return {"schema_version": 1, "run_id": env["runs"]["context"], "item_kind": "repo", "item_id": env["repo"],
+            "taxonomy": "context", "codebook_version": 1,
+            "labels": [{"category": "catalog", "evidence": [{"quote": quote, "quote_en": quote}]}],
+            "proposals": []}
+
+
+def test_repo_quotes_are_checked_against_cached_context(env, monkeypatch):
+    """#22: repo quotes must occur in the cached get_repo_context answer (built by
+    github_server.evidence_text, tested in test_github_server.py)."""
+    import github_server
+    text = "# A collection\nskills/ holds 40 unrelated skills\nis_template: false\nskill_md_files: 40"
+    monkeypatch.setattr(github_server, "evidence_text", lambda repo: text if repo == env["repo"] else None)
+    assert errs(env, repo_record(env, "skills/ holds 40 unrelated skills")) == []
+    assert errs(env, repo_record(env, "skill_md_files: 40")) == []
+    ok, e = has(errs(env, repo_record(env, "a quote the README never had")), "quote not found in the repo text")
+    assert ok, e
+    monkeypatch.setattr(github_server, "evidence_text", lambda repo: None)
+    ok, e = has(errs(env, repo_record(env, "skills/ holds 40 unrelated skills")), "no cached GitHub context")
+    assert ok, e
 
 
 # --- schema (shape) -------------------------------------------------------
