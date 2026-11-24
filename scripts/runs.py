@@ -13,6 +13,7 @@ import re
 import sys
 
 import models
+import permissions
 from db import connect
 
 PURPOSES = ("round0", "round", "final", "heldout", "ablation", "smoke")
@@ -47,6 +48,9 @@ def start_run(con, sample: str, taxonomy: str, rater: str, purpose: str, codeboo
         problems, _ = models.check()
         if problems:
             raise RunError("model config check failed; fix it before starting a run:\n  " + "\n  ".join(problems))
+        problems, _ = permissions.check()  # an agent file without `tools:` would inherit every tool (#17)
+        if problems:
+            raise RunError("permissions check failed; fix it before starting a run:\n  " + "\n  ".join(problems))
         model, effort = settings["model"], settings["effort"]
 
     s = con.execute("SELECT sample_id, item_kind FROM samples WHERE name = ?", (sample,)).fetchone()
