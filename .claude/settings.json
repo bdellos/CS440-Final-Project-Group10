@@ -7,6 +7,7 @@
       "mcp__pipeline__get_skill",
       "mcp__pipeline__get_sample",
       "mcp__pipeline__draw_sample",
+      "mcp__pipeline__derive_repo_sample",
       "mcp__pipeline__start_run",
       "mcp__pipeline__finish_run",
       "mcp__pipeline__record_label",

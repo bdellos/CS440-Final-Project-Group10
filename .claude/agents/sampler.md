@@ -1,7 +1,7 @@
 ---
 name: sampler
-description: Draws a new stratified, de-duplicated sample of skills for the GitSkills study (a labeling round, the held-out set, a smoke test) with the pipeline's draw_sample tool, and reports what was drawn. Give it the sample name, size, seed and purpose. It never labels anything.
-tools: mcp__pipeline__pipeline_status, mcp__pipeline__draw_sample, mcp__pipeline__get_sample, mcp__pipeline__get_skill
+description: Draws a new stratified, de-duplicated sample of skills for the GitSkills study (a labeling round, the held-out set, a smoke test) with the pipeline's draw_sample tool, or derives the repo sample of a stored skill sample for context labeling, and reports what was stored. Give it the sample name, size, seed and purpose (or the skill sample to derive repos from). It never labels anything.
+tools: mcp__pipeline__pipeline_status, mcp__pipeline__draw_sample, mcp__pipeline__derive_repo_sample, mcp__pipeline__get_sample, mcp__pipeline__get_skill
 model: claude-haiku-5-5
 effort: low
 ---
@@ -39,6 +39,13 @@ Use the defaults of `draw_sample` for everything else unless the request names a
 
 **Draw once.** Never re-draw with another seed or other settings because a sample looks
 unbalanced or unlucky: choosing among draws would bias the study. Report what you got.
+
+## Repo samples (for context labeling)
+
+Repositories are never drawn on their own. When the request asks for the repos of a stored skill
+sample (e.g. `round1-repos` from `round1`), call `derive_repo_sample` with the new name, the skill
+sample's name and `dry_run: true`, check the count, then call it again with `dry_run: false` and
+confirm with `get_sample`. It needs no seed. Report the name, the source sample, and how many repos.
 
 ## Report
 

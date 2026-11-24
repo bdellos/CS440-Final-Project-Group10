@@ -159,3 +159,39 @@ def test_tools_end_to_end(env):
     assert err.is_error and "already exists" in err.content[0].text
     missing = call(env["db"], "get_sample", {"name": "nope"})
     assert missing.is_error and "existing samples" in missing.content[0].text
+
+
+# --- repo samples for context labeling (#22) -----------------------------------------
+
+def test_repo_sample_follows_the_skill_sample(env):
+    con = env["con"]
+    skills = sampling.draw(con, "t1", 20, seed=3)["items"]
+    dry = sampling.repos_of(con, "t1-repos", "t1", dry_run=True)
+    assert dry["stored"] is False and con.execute("SELECT COUNT(*) FROM samples").fetchone()[0] == 1
+    res = sampling.repos_of(con, "t1-repos", "t1")
+    assert res["stored"] and res["item_kind"] == "repo"
+    assert [it["repo"] for it in res["items"]] == [it["repo_full_name"] for it in skills]  # one per repo, same order
+    got = sampling.get(con, "t1-repos")
+    assert got["item_kind"] == "repo" and got["total_items"] == 20
+    assert got["items"][0]["stratum"] == f"skill:{skills[0]['file_sha']}"
+    assert "repositories of the skills in sample 't1'" in got["method"]
+
+
+def test_repo_sample_needs_a_new_name_and_a_skill_sample(env):
+    con = env["con"]
+    sampling.draw(con, "t1", 5, seed=3)
+    sampling.repos_of(con, "t1-repos", "t1")
+    with pytest.raises(sampling.SampleError, match="already exists"):
+        sampling.repos_of(con, "t1-repos", "t1")
+    with pytest.raises(sampling.SampleError, match="no sample named"):
+        sampling.repos_of(con, "x-repos", "nope")
+    with pytest.raises(sampling.SampleError, match="derive repo samples from skill samples"):
+        sampling.repos_of(con, "t1-repos-repos", "t1-repos")
+
+
+def test_repo_sample_keeps_one_item_per_repo(env):
+    con = env["con"]
+    sampling.draw(con, "t2", 30, seed=5, one_per_repo=False)
+    res = sampling.repos_of(con, "t2-repos", "t2", dry_run=True)
+    repos = [it["repo"] for it in res["items"]]
+    assert len(repos) == len(set(repos)) <= 30

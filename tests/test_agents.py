@@ -115,6 +115,20 @@ def test_consolidator_works_only_through_next_and_its_tools():
         assert rule in text, rule
 
 
+def test_context_classifier_reads_repos_before_labeling():
+    path = AGENTS / "context-classifier.md"
+    import prompts
+    assert prompts._list_field(path.read_text(encoding="utf-8"), "skills") == [
+        "qualitative-coding-protocol", "apply-codebook", "repo-context-heuristics"]
+    tools = set(permissions.agent_tools(path))
+    assert {"mcp__github__get_repo_context", "mcp__pipeline__get_codebook", "mcp__pipeline__record_label"} <= tools
+    assert "mcp__pipeline__get_skill" not in tools   # it labels repos; it has no skill ids to read
+    text = body(path)
+    for rule in ("Always do this before labeling", "Classify the repository, not its skills",
+                 "never label a repo you could not read", "no `skill_language`", "Do not list the labels you gave"):
+        assert rule in text, rule
+
+
 def test_sampler_draws_once_after_a_dry_run():
     text = body(AGENTS / "sampler.md")
     assert "dry_run: true" in text and "dry_run: false" in text

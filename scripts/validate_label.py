@@ -13,7 +13,8 @@ Database checks (schemas/label.schema.json can only check shape):
   item      the item is in the run's sample and in the attached dataset; not labeled twice in the run
   language  skill_language matches the stored detection (#52)
   codebook  every label is a category of the run's codebook; no duplicates; proposals aren't existing categories
-  evidence  each quote occurs in the skill text (whitespace-insensitive; '...' may elide text);
+  evidence  each quote occurs in the skill text, or for a repo in its cached get_repo_context answer
+            (#22) (whitespace-insensitive; '...' may elide text);
             for English skills quote_en equals quote (#53)
 """
 import json
@@ -104,6 +105,15 @@ def validate_label(record, con):
             errors.append(f"language: skill_language is {record['skill_language']!r} but detection says {lang[0]!r}")
     elif not con.execute("SELECT 1 FROM gs.repos WHERE full_name = ?", (item,)).fetchone():
         errors.append(f"item: no repo {item} in the dataset")
+    else:
+        # Repo quotes are checked against what get_repo_context returned, rebuilt from the GitHub
+        # cache only (#22), so they're held to the same exactness as skill quotes.
+        from github_server import evidence_text
+        text = evidence_text(item)
+        if text is None:
+            errors.append(f"evidence: no cached GitHub context for {item}; call get_repo_context for it first, "
+                          "then quote from what it returned")
+            text = None
 
     cats = [lab["category"] for lab in record["labels"]]
     for dup in sorted({c for c in cats if cats.count(c) > 1}):
@@ -127,7 +137,7 @@ def validate_label(record, con):
     evidence += [(f"proposals/{i}", ev) for i, p in enumerate(record["proposals"]) for ev in p["evidence"]]
     for where, ev in evidence:
         if text is not None and not quote_found(ev["quote"], text):
-            errors.append(f"evidence: {where}: quote not found in the skill text: {ev['quote'][:80]!r}")
+            errors.append(f"evidence: {where}: quote not found in the {record['item_kind']} text: {ev['quote'][:80]!r}")
         if english and _norm(ev["quote_en"]) != _norm(ev["quote"]):
             errors.append(f"evidence: {where}: skill is English, so quote_en must equal quote")
     return errors

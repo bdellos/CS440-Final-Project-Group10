@@ -11,13 +11,12 @@
   "main_session_only": ["mcp__pipeline__start_run", "mcp__pipeline__finish_run", "Agent"],
   "agents": {
     "sampler": {
-      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__draw_sample", "mcp__pipeline__get_sample",
-                "mcp__pipeline__get_skill"],
+      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__draw_sample", "mcp__pipeline__derive_repo_sample",
+                "mcp__pipeline__get_sample", "mcp__pipeline__get_skill"],
       "may_write": ["data/"]
     },
     "context-classifier": {
-      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_skill",
-                "mcp__pipeline__get_codebook", "mcp__pipeline__record_label", "mcp__github__github_status",
+      "tools": ["mcp__pipeline__pipeline_status", "mcp__pipeline__get_sample", "mcp__pipeline__get_codebook", "mcp__pipeline__record_label", "mcp__github__github_status",
                 "mcp__github__get_repo_context"],
       "may_write": ["labels/"]
     },

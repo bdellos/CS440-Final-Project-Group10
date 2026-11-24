@@ -217,6 +217,24 @@ def test_repo_context_includes_dataset_counts(tmp_path):
     assert "DATA" in d["note"]
 
 
+def test_evidence_text_rebuilds_what_the_agent_saw_from_cache_only(tmp_path):
+    """#22: the text repo quotes are checked against. Built from the cache, never the network."""
+    from github_server import evidence_text
+    cache = tmp_path / "cache.db"
+    assert evidence_text(REPO, cache_db=cache) is None            # never fetched: can't check
+    gh, fake = make(tmp_path)
+    gh.repo_context(REPO, AS_OF)                                   # the agent's fetch fills the cache
+    n = len(fake.calls)
+    text = evidence_text(REPO, cache_db=cache)
+    assert len(fake.calls) == n                                    # no request at all
+    from validate_label import quote_found
+    for q in ("# Commit helper", "skills/a/SKILL.md", "fix: thing", "is_template: true", "skill_md_files: 2",
+              "claude", "language: TypeScript", "skills-dir: 1", "convex-quickstart",
+              "contents_also_in_other_repos: 1"):
+        assert quote_found(q, text), q
+    assert not quote_found("this repo is a template for everything", text)
+
+
 def test_dataset_block_survives_a_missing_repo(tmp_path):
     gh, _ = make(tmp_path, FakeGitHub(routes={f"/repos/{REPO}": (404, {"message": "Not Found"})}))
     out = call(build_server(github=gh), "get_repo_context", {"repo": REPO}).structured_content

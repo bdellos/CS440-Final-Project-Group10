@@ -190,6 +190,18 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
             except sampling.SampleError as e:
                 raise ToolError(str(e)) from None
 
+    @server.tool(annotations=WRITE, structured_output=True)
+    def derive_repo_sample(name: str, from_sample: str, dry_run: bool = False) -> dict[str, Any]:
+        """Store a repo sample for context labeling: the repositories of the skills in a stored skill
+        sample, in the same order, one per repository (#22). Use it so every purpose-labeled skill also
+        gets a context label for its repo. name: a new lowercase slug, e.g. 'round1-repos'.
+        dry_run: show what would be stored without storing it."""
+        with self_db() as con:
+            try:
+                return sampling.repos_of(con, name, from_sample, dry_run)
+            except sampling.SampleError as e:
+                raise ToolError(str(e)) from None
+
     @server.tool(annotations=READ_ONLY, structured_output=True)
     def get_sample(name: str, offset: int = 0, limit: int = 500) -> dict[str, Any]:
         """The items of a stored sample, in order: position, skill id (file_sha), stratum, name.
