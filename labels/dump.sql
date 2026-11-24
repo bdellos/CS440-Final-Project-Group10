@@ -155,6 +155,11 @@ INSERT INTO "sample_items" VALUES(1,'00203e0ea4418c3d09a779562031c07466ed02b2',4
 INSERT INTO "sample_items" VALUES(1,'002b4e22d37f257fad9bf1213da5ce5b47997b4b',48,'length_q2');
 INSERT INTO "sample_items" VALUES(1,'00aa3df86cbfbc66b433f1f5633f3ea37481df3b',49,'length_q1');
 INSERT INTO "sample_items" VALUES(1,'01a176c42146ab8cb78d7dbd8b234e6b7ef3e457',50,'length_q1');
+INSERT INTO "sample_items" VALUES(2,'00123a723aa46eb70312f871715b9187d207b47a',1,'length_q2');
+INSERT INTO "sample_items" VALUES(2,'005e5d05355e0ffe17243dfbf75428f637c02bf6',2,'length_q2');
+INSERT INTO "sample_items" VALUES(2,'0150755e72c6a392a030b18af63c32bfdf658afd',3,'length_q1');
+INSERT INTO "sample_items" VALUES(2,'000c903b1fd54833adcb9dea1cef3fdda3b906a1',4,'length_q4');
+INSERT INTO "sample_items" VALUES(2,'0129cacb251f6125cb0be38d134e6756b8ead3aa',5,'length_q3');
 CREATE TABLE samples (
     sample_id    INTEGER PRIMARY KEY,
     name         TEXT NOT NULL UNIQUE,               -- 'round0', 'round1', 'heldout', 'smoke'
@@ -164,6 +169,7 @@ CREATE TABLE samples (
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 ) STRICT;
 INSERT INTO "samples" VALUES(1,'round0','skill','Distinct English-language skills with valid front matter, 200-20,000 body characters, at most one per skill name and one per repository, stratified by body-length quartile (13/13/12/12). scripts/draw_round0_sample.py',440,'2026-11-24T00:20:23Z');
+INSERT INTO "samples" VALUES(2,'smoke1','skill','distinct skills, English only (language = ''en''), valid front matter, 200-20,000 body characters, excluding skills, skill names and repositories used in earlier samples, at most one per skill name, at most one per repository; stratified by body-length quartile, proportional allocation, seed 20261124. scripts/sampling.py',20261124,'2026-11-24T21:52:01Z');
 CREATE TABLE skill_language (          -- populated by #52
     file_sha     TEXT PRIMARY KEY,
     language     TEXT NOT NULL,                      -- 'en', 'zh', 'mixed', 'unknown', ...
