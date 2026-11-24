@@ -78,10 +78,12 @@ schemas/label.schema.json
 ## Rules for agents
 
 - **Only `codebook-consolidator` writes to `codebook/`.** After freeze, nobody does.
-- **Never edit a past codebook version**; create the next `vNN`.
-- Every label must validate against `schemas/label.schema.json` and include: item id, labels, quoted evidence, `codebook_version`, model id.
+- **Never edit a past codebook version**; create the next one with `scripts/codebook.py next <taxonomy> --round N`. Format and workflow: `codebook/README.md`. `scripts/codebook.py check` must pass before any codebook commit.
+- Every label record must pass `scripts/validate_label.py` (the JSON schema `schemas/label.schema.json` plus database checks) and include: `run_id`, item id, labels, verbatim quoted evidence (`quote` + English `quote_en`), `codebook_version`. Model and temperature are stored once per run, not in each record.
+- Quotes must appear in the skill text exactly (whitespace aside; `...` may elide). Code from the original text, never from a translation; translate only the evidence.
 - Category changes are **proposals** for the humans, not decisions.
-- Keep outputs reproducible: pin model and temperature; log them with each label.
+- Keep outputs reproducible: each agent's model and effort are pinned in `config/models.json` (full model IDs, never aliases) and copied onto every run. `scripts/models.py check` must pass. **When delegating to a subagent, never pass an `effort` override**, and never set `CLAUDE_CODE_EFFORT_LEVEL` / `CLAUDE_CODE_SUBAGENT_EFFORT`: both silently replace the pinned effort. Temperature can't be set on current Claude models, so outputs are not deterministic.
+- **Budget: the cheapest model (Claude Haiku 5.5) everywhere.** Never run anything that costs real money (Batch API, large runs) without an explicit go-ahead and a cost estimate.
 - Cache GitHub API responses; respect rate limits.
 
 ## Conventions

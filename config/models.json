@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Single source of truth for which model and effort each agent uses (issue #18).",
+    "scripts/models.py check: .claude/agents/<name>.md must match this file (model: and effort: frontmatter).",
+    "Every run copies model and effort from here into runs.model / runs.effort.",
+    "Temperature is not settable on current Claude models (the API rejects it), so outputs are not deterministic; runs.temperature stays NULL.",
+    "Chosen for cost: Claude Haiku 5.5 everywhere. low effort for high-volume agents, medium (Haiku's default) for the two low-volume agents that shape the codebook."
+  ],
+  "agents": {
+    "sampler":               { "model": "claude-haiku-5-5", "effort": "low" },
+    "context-classifier":    { "model": "claude-haiku-5-5", "effort": "low" },
+    "open-coder":            { "model": "claude-haiku-5-5", "effort": "medium" },
+    "codebook-consolidator": { "model": "claude-haiku-5-5", "effort": "medium" },
+    "labeler":               { "model": "claude-haiku-5-5", "effort": "low" },
+    "skeptic":               { "model": "claude-haiku-5-5", "effort": "low" },
+    "analyst":               { "model": "claude-haiku-5-5", "effort": "low" }
+  },
+  "batch": {
+    "_comment": "Final full pass through the Batch API (#44), if one is ever run. Each request sets these explicitly; the response's model field is recorded.",
+    "model": "claude-haiku-5-5",
+    "effort": "low"
+  }
+}

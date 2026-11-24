@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS codebook_versions (
     codebook_version_id INTEGER PRIMARY KEY,
     taxonomy     TEXT NOT NULL CHECK (taxonomy IN ('purpose', 'context')),
     version      INTEGER NOT NULL,                   -- vNN
-    variant      TEXT NOT NULL DEFAULT 'main',       -- 'main', or 'seeded' / 'agent_only' for the ablation (#49)
+    variant      TEXT NOT NULL DEFAULT 'main',       -- 'main', or 'seeded' / 'agent-only' for the ablation (#49)
     file_path    TEXT NOT NULL,                      -- codebook/purpose/v03.md
     git_commit   TEXT,                               -- commit that added the file
     frozen       INTEGER NOT NULL DEFAULT 0 CHECK (frozen IN (0, 1)),
@@ -122,13 +122,15 @@ CREATE TABLE IF NOT EXISTS runs (
     codebook_version_id INTEGER REFERENCES codebook_versions(codebook_version_id),  -- NULL = open coding (Round 0)
     rater_kind   TEXT NOT NULL CHECK (rater_kind IN ('agent', 'human')),
     rater        TEXT NOT NULL,                      -- 'labeler', 'skeptic', 'open-coder', 'brendan', 'ryan'
-    model        TEXT,                               -- pinned model id (#18); NULL for humans
-    temperature  REAL,
+    model        TEXT,                               -- pinned model id from config/models.json (#18); NULL for humans
+    temperature  REAL,                               -- always NULL: current Claude models reject temperature (#18)
+    -- from config/models.json; 'unrecorded' only for agent runs made before effort was tracked (schema v2)
+    effort       TEXT CHECK (effort IS NULL OR effort IN ('low', 'medium', 'high', 'xhigh', 'max', 'unrecorded')),
     purpose      TEXT NOT NULL,                      -- 'round0', 'round', 'final', 'heldout', 'ablation', 'smoke'
     started_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     finished_at  TEXT,                               -- set by the Stop hook (#36)
     notes        TEXT,
-    CHECK (rater_kind = 'human' OR model IS NOT NULL)
+    CHECK (rater_kind = 'human' OR (model IS NOT NULL AND effort IS NOT NULL))
 ) STRICT;
 
 -- ---------------------------------------------------------------------------
@@ -220,6 +222,16 @@ BEGIN SELECT RAISE(ABORT, 'category not in this run''s codebook'); END;
 CREATE INDEX IF NOT EXISTS annotations_item ON annotations(item_id);
 CREATE INDEX IF NOT EXISTS evidence_annotation ON evidence(annotation_id);
 CREATE INDEX IF NOT EXISTS proposals_status ON proposals(status);
+
+-- PROPOSED_NEW review queue. A proposal backed only by non-English text can't be checked
+-- against the original by the humans (English only), so it is flagged for extra review (#53).
+CREATE VIEW IF NOT EXISTS proposals_review AS
+SELECT p.proposal_id, p.status, p.proposed_name, p.definition, p.justification,
+       r.run_id, r.rater, a.item_id, a.skill_language,
+       CASE WHEN a.skill_language IS NOT NULL AND a.skill_language <> 'en' THEN 1 ELSE 0 END AS needs_extra_review
+FROM proposals p
+JOIN annotations a USING (annotation_id)
+JOIN runs r USING (run_id);
 
 -- Sampling frame with language, for the sampler (#21). language is NULL until detected.
 CREATE VIEW IF NOT EXISTS skills_with_language AS
