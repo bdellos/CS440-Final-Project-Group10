@@ -4,8 +4,8 @@ Agents never edit labels.db or label files directly. Every write goes through a 
 and each tool validates before it writes, so a malformed label can't get into the data.
 
 Tools, each added by its own issue:
-    pipeline_status (#11)   get_skill (#13)
-    still to come: sample (#12), start_run / finish_run (#58), record_label (#14), get_disagreements (#15)
+    pipeline_status (#11)   get_skill (#13)   draw_sample / get_sample (#12)
+    still to come: start_run / finish_run (#58), record_label (#14), get_disagreements (#15)
 
 Run by Claude Code through .mcp.json (stdio). Manual check:
     .venv/Scripts/python scripts/pipeline_server.py --status
@@ -32,6 +32,7 @@ from mcp_types import ToolAnnotations
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import models  # noqa: E402
+import sampling  # noqa: E402
 from codebook import check as codebook_check  # noqa: E402
 from db import SCHEMA_VERSION, connect, dataset_path, labels_path  # noqa: E402
 
@@ -161,6 +162,40 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
             "content_chars": len(content),
             "truncated": len(content) > max_chars,
         }
+
+    WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=False)
+
+    @server.tool(annotations=WRITE, structured_output=True)
+    def draw_sample(name: str, n: int, seed: int, stratify_by: str = "length", english_only: bool = True,
+                    valid_frontmatter_only: bool = True, min_chars: int = 200, max_chars: int = 20_000,
+                    exclude_sampled: bool = True, one_per_name: bool = True, one_per_repo: bool = True,
+                    dry_run: bool = False) -> dict[str, Any]:
+        """Draw a stratified sample of skills and store it as a frozen, named sample.
+
+        name: lowercase slug, e.g. 'round1', 'heldout'. Names are permanent; a taken name is refused.
+        n: number of skills. seed: integer, recorded so the draw can be repeated.
+        stratify_by: 'length' (body-length quartiles), 'location' (location class) or 'none'.
+        Defaults match Round 0: English only, valid front matter, 200-20,000 body characters,
+        one skill per name and per repository, and no skill that is already in another sample.
+        dry_run: show what would be drawn without storing it. Human-coded sets must stay English-only."""
+        with self_db() as con:
+            try:
+                return sampling.draw(con, name, n, seed, stratify_by, english_only, valid_frontmatter_only,
+                                     min_chars, max_chars, exclude_sampled, one_per_name, one_per_repo, dry_run)
+            except sampling.SampleError as e:
+                raise ToolError(str(e)) from None
+
+    @server.tool(annotations=READ_ONLY, structured_output=True)
+    def get_sample(name: str, offset: int = 0, limit: int = 500) -> dict[str, Any]:
+        """The items of a stored sample, in order: position, skill id (file_sha), stratum, name.
+        Use the ids with get_skill. Large samples are paged with offset/limit (limit <= 500)."""
+        if not 1 <= limit <= 500 or offset < 0:
+            raise ToolError("need 1 <= limit <= 500 and offset >= 0")
+        with self_db() as con:
+            try:
+                return sampling.get(con, name, offset, limit)
+            except sampling.SampleError as e:
+                raise ToolError(str(e)) from None
 
     return server
 
