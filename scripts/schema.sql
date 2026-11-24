@@ -221,6 +221,16 @@ CREATE INDEX IF NOT EXISTS annotations_item ON annotations(item_id);
 CREATE INDEX IF NOT EXISTS evidence_annotation ON evidence(annotation_id);
 CREATE INDEX IF NOT EXISTS proposals_status ON proposals(status);
 
+-- PROPOSED_NEW review queue. A proposal backed only by non-English text can't be checked
+-- against the original by the humans (English only), so it is flagged for extra review (#53).
+CREATE VIEW IF NOT EXISTS proposals_review AS
+SELECT p.proposal_id, p.status, p.proposed_name, p.definition, p.justification,
+       r.run_id, r.rater, a.item_id, a.skill_language,
+       CASE WHEN a.skill_language IS NOT NULL AND a.skill_language <> 'en' THEN 1 ELSE 0 END AS needs_extra_review
+FROM proposals p
+JOIN annotations a USING (annotation_id)
+JOIN runs r USING (run_id);
+
 -- Sampling frame with language, for the sampler (#21). language is NULL until detected.
 CREATE VIEW IF NOT EXISTS skills_with_language AS
 SELECT s.*, l.language, l.confidence AS language_confidence

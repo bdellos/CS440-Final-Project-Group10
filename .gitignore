@@ -7,3 +7,6 @@ __pycache__/
 /labels/*.db
 /labels/*.db-wal
 /labels/*.db-shm
+
+# test caches
+.pytest_cache/

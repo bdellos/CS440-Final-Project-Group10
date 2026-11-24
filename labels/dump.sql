@@ -46,6 +46,7 @@ INSERT INTO "dataset_loads" VALUES(1,'data/gitskills-sample/agent_skills_sample/
 INSERT INTO "dataset_loads" VALUES(2,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:20:24Z');
 INSERT INTO "dataset_loads" VALUES(3,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
 INSERT INTO "dataset_loads" VALUES(4,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T00:28:15Z');
+INSERT INTO "dataset_loads" VALUES(5,'data/gitskills-sample/agent_skills_sample/agent_skills_sample.db',290955264,'2026-07-25T01:21:22Z',29786,13000,11841,'2026-11-24T01:28:36Z');
 CREATE TABLE evidence (
     evidence_id  INTEGER PRIMARY KEY,
     annotation_id INTEGER NOT NULL REFERENCES annotations(annotation_id),
@@ -212,4 +213,11 @@ CREATE INDEX skills_name ON skills(name_key);
 CREATE VIEW skills_with_language AS
 SELECT s.*, l.language, l.confidence AS language_confidence
 FROM skills s LEFT JOIN skill_language l USING (file_sha);
+CREATE VIEW proposals_review AS
+SELECT p.proposal_id, p.status, p.proposed_name, p.definition, p.justification,
+       r.run_id, r.rater, a.item_id, a.skill_language,
+       CASE WHEN a.skill_language IS NOT NULL AND a.skill_language <> 'en' THEN 1 ELSE 0 END AS needs_extra_review
+FROM proposals p
+JOIN annotations a USING (annotation_id)
+JOIN runs r USING (run_id);
 COMMIT;
