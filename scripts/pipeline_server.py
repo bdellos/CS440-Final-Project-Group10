@@ -5,7 +5,7 @@ and each tool validates before it writes, so a malformed label can't get into th
 
 Tools, each added by its own issue:
     pipeline_status (#11)   get_skill (#13)   draw_sample / get_sample (#12)   start_run / finish_run (#58)
-    record_label (#14)   still to come: get_disagreements (#15)
+    record_label (#14)   get_disagreements (#15)
 
 Run by Claude Code through .mcp.json (stdio). Manual check:
     .venv/Scripts/python scripts/pipeline_server.py --status
@@ -31,6 +31,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp_types import ToolAnnotations
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import disagreements  # noqa: E402
 import labeling  # noqa: E402
 import models  # noqa: E402
 import runs  # noqa: E402
@@ -259,6 +260,27 @@ def build_server(labels_db: Path | None = None, dataset_db: Path | None = None) 
             try:
                 return labeling.store_label(con, record, allow_human=False)
             except labeling.LabelRejected as e:
+                raise ToolError(str(e)) from None
+
+    @server.tool(annotations=READ_ONLY, structured_output=True)
+    def get_disagreements(run_a: int, run_b: int, include_agreements: bool = False, offset: int = 0,
+                          limit: int = 50) -> dict[str, Any]:
+        """Compare two runs on the same sample and codebook version, for human review.
+        Typical use: labeler vs skeptic, or an agent vs a person on the held-out set.
+
+        Each item is 'agree' (same categories), 'partial' (overlap), 'disjoint' (nothing in common)
+        or 'missing' (only one run labeled it). Listed items show both sides' categories with up to
+        two English quotes each. The summary has the counts and the exact-agreement rate.
+        Round 0 runs (free-form codes) can't be compared here.
+
+        For the main session reviewing results only: a labeling agent must never see another
+        rater's labels, or its own labels stop being independent."""
+        if not 1 <= limit <= 200 or offset < 0:
+            raise ToolError("need 1 <= limit <= 200 and offset >= 0")
+        with self_db() as con:
+            try:
+                return disagreements.compare(con, run_a, run_b, include_agreements, offset, limit)
+            except disagreements.CompareError as e:
                 raise ToolError(str(e)) from None
 
     return server
