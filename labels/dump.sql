@@ -2839,6 +2839,19 @@ INSERT INTO "categories" VALUES(3,'template','Template or starter','The reposito
 INSERT INTO "categories" VALUES(3,'demonstration','Demonstration, example or tutorial','The repository shows how something works or teaches it, and is not meant for real use as is.');
 INSERT INTO "categories" VALUES(3,'personal-config','Personal configuration','A person''s own environment setup (dotfiles, editor and shell configuration, personal agent setup), with skills as part of that configuration.');
 INSERT INTO "categories" VALUES(3,'unclear','Unclear or other','The kind cannot be told from the repository (empty or missing README, deleted repository with little metadata), or it fits none of the kinds above. Use sparingly: a repository that fits a kind imperfectly gets that kind; repeated "other" cases with something in common become a PROPOSED_NEW for the researchers.');
+INSERT INTO "categories" VALUES(4,'write-tests','Write and guide tests','Writes, plans or guides automated tests: test cases, fixtures, mocks, test-driven workflows, and the choice of test frameworks.');
+INSERT INTO "categories" VALUES(4,'review-validate','Review, audit and validate','Checks existing code, designs, documents, interfaces or configurations against a standard, requirement or checklist, and reports findings or a pass/fail verdict.');
+INSERT INTO "categories" VALUES(4,'write-code','Write and integrate code','Writes application, server, component or algorithm code, or integrates a library or service into a codebase.');
+INSERT INTO "categories" VALUES(4,'design-plan','Design and plan','Produces designs, architecture, data models, specifications, UX concepts or plans that are written down before, or instead of, implementation.');
+INSERT INTO "categories" VALUES(4,'configure-operate','Configure and operate systems','Sets up, configures, runs or inspects build tooling, network links and pipeline runs.');
+INSERT INTO "categories" VALUES(4,'orchestrate-workflows','Orchestrate agent work','Directs how agents carry out multi-step work: executing a written plan, coordinating several agents, or processing queued instructions.');
+INSERT INTO "categories" VALUES(4,'agent-knowledge','Maintain agent and project knowledge','Keeps knowledge that agents or people reuse across sessions: memory files, session context, specifications, notes, and maps of a codebase.');
+INSERT INTO "categories" VALUES(4,'analyze-research','Research, analyze and summarize','Researches a topic, analyzes data, or condenses content into a report, dashboard, summary or knowledge map.');
+INSERT INTO "categories" VALUES(4,'write-content','Write prose and reports','Writes text that people read: editorial and site copy, articles, and structured reports such as postmortems.');
+INSERT INTO "categories" VALUES(4,'produce-media','Produce and retrieve media','Creates visual or audio media from source material, or downloads video, audio and subtitles.');
+INSERT INTO "categories" VALUES(4,'integrate-external','Operate external services and tools','Uses an external service or tool through its API, CLI or connector to read, change or manage what it holds.');
+INSERT INTO "categories" VALUES(4,'advise-expert','Advise as a domain expert','Gives expert guidance on one technology or domain, answering questions and recommending practices, without auditing a specific artifact or doing the work itself.');
+INSERT INTO "categories" VALUES(4,'unclear-purpose','Purpose unclear (catch-all)','Catch-all for skills whose text does not show what kind of work they codify.');
 CREATE TABLE codebook_versions (
     codebook_version_id INTEGER PRIMARY KEY,
     taxonomy     TEXT NOT NULL CHECK (taxonomy IN ('purpose', 'context')),
@@ -2853,6 +2866,7 @@ CREATE TABLE codebook_versions (
 INSERT INTO "codebook_versions" VALUES(1,'context',1,'main','codebook/context/v01.md','4e1e7af45a88914df288c501af5ee0e2c1d023c6',0,'2026-11-25T00:10:59Z');
 INSERT INTO "codebook_versions" VALUES(2,'context',2,'main','codebook/context/v02.md','04ddc71986fdd701d7fab92efb822577ebe01ed2',0,'2026-11-25T00:58:05Z');
 INSERT INTO "codebook_versions" VALUES(3,'context',3,'main','codebook/context/v03.md','316de71fcb489e155571e307c683fe1157e1f1b8',1,'2026-11-25T03:09:18Z');
+INSERT INTO "codebook_versions" VALUES(4,'purpose',1,'main','codebook/purpose/v01.md','0e575c7fdf594563fd210b5fb45b10608e153578',0,'2026-11-25T22:48:19Z');
 CREATE TABLE dataset_loads (
     load_id      INTEGER PRIMARY KEY,
     dataset_path TEXT NOT NULL,
