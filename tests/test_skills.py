@@ -70,6 +70,7 @@ ALLOWED_TOKENS = {
     "distinct_authors_in_last_100", "dataset", "skill_files", "contents_also_in_other_repos", "locations",
     "skill_names_first_30", "repo", "metadata", ".claude/skills/", "md", "available", "snapshot",
     "tree.skill_md_files", "dataset.skill_files", "field: value", "is_template: true", "skill_md_files: 240",
+    "User",  # a value of owner_type
 }
 
 

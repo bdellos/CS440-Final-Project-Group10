@@ -1,6 +1,6 @@
 ---
 name: repo-context-heuristics
-description: Signals for classifying what kind of repository a skill lives in (operational project, catalog, template, demonstration, other) from get_repo_context - README, file tree, metadata, commit history and the dataset's own counts. Preloaded by the context-classifier, together with qualitative-coding-protocol and apply-codebook.
+description: Signals for classifying what kind of repository a skill lives in (operational project, catalog, template, demonstration, personal configuration, other) from get_repo_context - README, file tree, metadata, commit history and the dataset's own counts. Preloaded by the context-classifier, together with qualitative-coding-protocol and apply-codebook.
 ---
 
 # Repository context heuristics
@@ -55,9 +55,14 @@ with that work.
 - Small tree; a few illustrative skills; often a single author and a short burst of commits.
 - Skills explain the mechanism more than they serve real work.
 
-**None of these**: for example personal configuration or dotfiles, an archive or mirror, or a repo
-whose purpose can't be told. Don't force a fit; follow the codebook (a matching category, or a
-proposal as the protocol describes).
+**Personal configuration**: one person's own environment, with skills as part of that setup.
+- Name or description says dotfiles, config, setup, "my" environment; `owner_type` is `User`.
+- Tree dominated by shell, editor, terminal or agent configuration files rather than a product.
+- Skills tuned to that person's workflow; published as-is, not as a starter to fill in (that is a
+  template).
+
+**None of these**: for example an archive or mirror, or a repo whose purpose can't be told. Don't
+force a fit; follow the codebook (its catch-all category, or a proposal as the protocol describes).
 
 ## 3. Weighing signals
 
