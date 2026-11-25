@@ -21,6 +21,39 @@ It only fixes what a category describes, how many to aim for, and which codes ar
    category for a single fine code unless no other category could hold it.
 4. A catch-all for skills whose purpose can't be told is allowed (as in the context codebook).
 
+## Decisions after round 1
+
+### 2026-11-25: version control, and four boundaries (v02)
+
+Round 1 (run 19, v01, 100 skills) made no proposals, but 24 labels note an imperfect fit. The
+researchers read those notes and decided (Brendan):
+
+1. **New category `version-control`: Version control and code hosting.** Skills that run or set
+   rules for source-control work: staging and committing, commit messages, branching, pull
+   requests, merging, rebasing, pushing, changelog and release steps.
+   - Include: commit-and-push helpers; PR size, branch-protection and merge rules; preparing and
+     submitting a pull request; merging feature or stacked branches.
+   - Exclude: reviewing the code in a pull request (`review-validate`); operating a hosted service's
+     issues, inbox or settings through its API (`integrate-external`); CI/CD pipelines and build
+     tooling (`configure-operate`).
+   - Examples:
+     - `00cd790c1e4e9914e7e8d56fcc1c50ee07ce78ca`: "Analyze all uncommitted changes, generate a comprehensive yet succinct commit message, stage, commit, and push in one step."
+     - `006bc2290cedf0d7d5743fbb65d00b3e16d1cbc9`: "Prepares and submits a pull request for feature or bugfix work."
+     - `005dc0cb2c08aa3dc10144ee2e291a332219c543`: "Safely merge feature branches, bookmarks, and stacked changes into main."
+   Place it after `write-code`. Add matching Exclude entries where other categories currently take
+   git or PR work (`integrate-external`, `configure-operate`).
+2. **`write-content` Include:** generating or formatting documentation (API reference documents,
+   documentation formats), even when a build step produces it.
+3. **`configure-operate` Include:** running local tools and automating the operating system (a local
+   CLI, AppleScript window control). **`integrate-external`** stays for external services that hold
+   the user's data or accounts (APIs, SaaS, connectors); add that to its Exclude.
+4. **`design-plan` Include:** UI and visual design rules (colour, UI states). **`write-code`
+   Include:** library and API usage guides for writing code against them.
+
+Round 1 yields one new category (fewer than 2), so the purpose codebook is frozen at v02 (#43).
+This category came from the researchers reading the labeler's notes, not from an agent proposal;
+the report says so.
+
 ## Why
 
 The challenge asks *what developers codify in skills*. The kind of work answers that directly and
