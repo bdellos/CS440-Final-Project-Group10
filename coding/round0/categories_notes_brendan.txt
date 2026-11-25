@@ -1,0 +1,27 @@
+Code creation
+	- maybe combine with data generation
+Data generation
+	- maybe combine with code creation
+Testing (include code quality)
+	- Making, passing tests. QA steps
+	- Maybe this should be labeled quality assurance instead?
+Workflow/devops
+	- Assistance for a developer
+Tool/API usage
+	- Outlines when to use a tool or when to use a specific API.
+	- Each is their own category, may be too broad
+	- May be too broad
+Project knowledge/context
+	- Information about the project 
+Non-code content (documents and such)
+	- Handling of documents, spreadsheets, etc
+Agent info
+	- Relates almost exclusively to skills, tools, MCPs, etc.
+Data analysis
+	- Given some data, tells the user something about the data
+Validation
+	- Cross-referencing with specific libraries, technologies, etc.
+	- May overlap with API usage
+	- some validation skills seem to be based off the SKILL.md file itself
+	- Seems a bit broad
+Other

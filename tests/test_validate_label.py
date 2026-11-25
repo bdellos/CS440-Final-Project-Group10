@@ -314,3 +314,16 @@ def test_bounded_quotes_for_repos():
     assert quote_found("A Flask web application.", text, bounded=True)
     assert quote_found("A Flask ... application.", text, bounded=True)
     assert not quote_found("Flask web app", text, bounded=True)        # cut mid-word
+
+
+def test_only_human_open_coding_may_lack_evidence(env):
+    """Decided 2026-11-25 (#40): researchers' imported Round 0 codes may lack evidence; agents'
+    labels, open coding included, and every codebook label still need a quote."""
+    rec = skill_record(env, run="open")
+    rec["labels"][0]["evidence"] = []
+    ok, e = has(errs(env, rec), "at least one quote is required")
+    assert ok, e                                                         # agent open-coding run
+    rec = skill_record(env)
+    rec["labels"][0]["evidence"] = []
+    ok, e = has(errs(env, rec), "schema")
+    assert ok, e                                                         # codebook run: schema refuses
