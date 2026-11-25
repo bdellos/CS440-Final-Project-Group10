@@ -79,10 +79,11 @@ force a fit; follow the codebook (its catch-all category, or a proposal as the p
 
 ## 4. When GitHub has no answer
 
-If `available` is false (repo deleted, renamed away or blocked) or `snapshot` is null, classify
-from the `dataset` block alone: its `repo` row (description, language, dates) and its skill
-counts, locations and names. Say in `notes` that only dataset fields were available. If even
-those can't tell the kind, use a proposal or the codebook's catch-all category, as it defines.
+If `available` is false (repo deleted, renamed away or blocked) or `snapshot` is null, only the
+`dataset` block is left. Its description can still state the kind; a name, language or skill path
+alone can't. With no description, use the codebook's catch-all category, however telling the name
+looks (a name like .dotfiles is a hint, not evidence). Say in `notes` that only dataset fields were
+available.
 
 ## 5. Evidence for repositories
 

@@ -81,6 +81,21 @@ owner. `personal-config` keeps only skills that are part of a broader personal e
 
 Apply this to the `skill-catalog` Include and to the `personal-config` Exclude; change nothing else.
 
+### For v03 (2026-11-25, after rerunning v02 on the Round 0 repos)
+
+Two rules, for the cases that changed between the v01 and v02 runs although the codebook didn't:
+
+1. **Starting point means template.** A repository whose README says it may serve as a starting
+   point for others is a `template`, even if it is one person's own setup. Apply this to the
+   `template` Include and to the existing `personal-config` Exclude that already sends such
+   configuration to `template`.
+2. **Gone from GitHub means unclear, unless the description says otherwise.** A repository that is
+   no longer on GitHub (the classifier gets no README, files or history) and has no description in
+   the dataset is `unclear`, whatever its name, language or skill paths suggest. If the dataset
+   description states what the repository is, use that kind. Apply this to the `unclear` Include.
+
+Change nothing else.
+
 ## Notes for the consolidator
 
 - Write each kind in the codebook format (`codebook/README.md`). Definitions one or two sentences.
