@@ -4,6 +4,7 @@
     .venv/Scripts/python scripts/codebook.py next purpose --round 3        # copy latest -> v(N+1).md
     .venv/Scripts/python scripts/codebook.py next purpose --round 1 --variant seeded
     .venv/Scripts/python scripts/codebook.py register codebook/purpose/v03.md
+    .venv/Scripts/python scripts/codebook.py freeze context            # at saturation (#43); humans only
 
 Format and rules: codebook/README.md. The key rule, "never edit a past version", is
 enforced through git: a vNN.md file may appear in exactly one commit and must not have
@@ -341,6 +342,48 @@ def _link_proposals(con, cb: Codebook, version_id: int) -> tuple:
     return linked, warnings
 
 
+def freeze_tag(taxonomy, variant, version) -> str:
+    return f"codebook-{taxonomy}{'' if variant == 'main' else '-' + variant}-v{version:02d}-frozen"
+
+
+def freeze(taxonomy, con, variant="main", tag=True) -> str:
+    """Freeze a series at its latest registered version (#43): set codebook_versions.frozen (database
+    triggers then block category changes, and the codebook guard blocks new versions and edits) and
+    tag the version's commit. Refuses while a newer version file is unregistered or proposals made
+    against the series are still pending. Idempotent."""
+    row = con.execute("SELECT codebook_version_id, version, git_commit, frozen FROM codebook_versions "
+                      "WHERE taxonomy = ? AND variant = ? ORDER BY version DESC LIMIT 1",
+                      (taxonomy, variant)).fetchone()
+    if row is None:
+        raise SystemExit(f"no registered {taxonomy}/{variant} version to freeze")
+    vid, version, commit, is_frozen = row
+    newest = latest(taxonomy, variant)
+    if newest is not None and parse(newest).version != version:
+        raise SystemExit(f"{rel(newest)} is newer than the registered v{version:02d}; "
+                         "register it (or drop it) before freezing")
+    pending = [r[0] for r in con.execute(
+        """SELECT p.proposal_id FROM proposals p JOIN annotations a USING (annotation_id) JOIN runs r USING (run_id)
+           JOIN codebook_versions v ON v.codebook_version_id = r.codebook_version_id
+           WHERE v.taxonomy = ? AND v.variant = ? AND p.status = 'pending'""", (taxonomy, variant))]
+    if pending:
+        raise SystemExit(f"proposals still pending for {taxonomy}/{variant}: "
+                         + ", ".join(f"#{p}" for p in pending) + "; decide them with scripts/proposals.py first")
+    name = freeze_tag(taxonomy, variant, version)
+    if tag:
+        existing = subprocess.run(["git", "rev-parse", "-q", "--verify", f"refs/tags/{name}^{{commit}}"],
+                                  cwd=ROOT, capture_output=True, text=True).stdout.strip()
+        if existing and existing != commit:
+            raise SystemExit(f"tag {name} already points at {existing[:8]}, not {commit[:8]}")
+        if not existing:
+            _git("tag", "-a", name, commit, "-m", f"{taxonomy}/{variant} codebook frozen at v{version:02d} (#43)")
+    if is_frozen:
+        return f"{taxonomy}/{variant} v{version:02d}: already frozen (tag {name})"
+    with con:
+        con.execute("UPDATE codebook_versions SET frozen = 1 WHERE codebook_version_id = ?", (vid,))
+    return (f"{taxonomy}/{variant} frozen at v{version:02d} (commit {commit[:8]}"
+            + (f", tag {name}; push it with `git push origin {name}`)" if tag else ")"))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -352,6 +395,9 @@ def main():
     n.add_argument("--from", dest="base", help="for a new variant: the version file to start from")
     r = sub.add_parser("register", help="load a committed version into labels.db")
     r.add_argument("file")
+    f = sub.add_parser("freeze", help="freeze a series at its latest registered version (humans only)")
+    f.add_argument("taxonomy", choices=TAXONOMIES)
+    f.add_argument("--variant", default="main")
     a = p.parse_args()
 
     if a.cmd == "check":
@@ -368,6 +414,9 @@ def main():
     if a.cmd == "register":
         from db import connect
         print(register(a.file, connect()))
+    if a.cmd == "freeze":
+        from db import connect
+        print(freeze(a.taxonomy, connect(), a.variant))
 
 
 if __name__ == "__main__":

@@ -123,6 +123,10 @@ def check_shell(command: str, agent: str | None, cwd: str | None = None, *, is_f
             sub, rest = m.group(1), m.group(2)
             if sub in ("check", "register"):
                 continue
+            if sub == "freeze":
+                if agent:
+                    raise Blocked(f"{who} may not freeze a codebook; the researchers decide the freeze (#43).")
+                continue
             if sub == "next":
                 if agent != CONSOLIDATOR:
                     raise Blocked(f"{who} may not create codebook versions; only the codebook-consolidator runs "

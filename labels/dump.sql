@@ -852,7 +852,7 @@ CREATE TABLE codebook_versions (
 ) STRICT;
 INSERT INTO "codebook_versions" VALUES(1,'context',1,'main','codebook/context/v01.md','4e1e7af45a88914df288c501af5ee0e2c1d023c6',0,'2026-11-25T00:10:59Z');
 INSERT INTO "codebook_versions" VALUES(2,'context',2,'main','codebook/context/v02.md','04ddc71986fdd701d7fab92efb822577ebe01ed2',0,'2026-11-25T00:58:05Z');
-INSERT INTO "codebook_versions" VALUES(3,'context',3,'main','codebook/context/v03.md','316de71fcb489e155571e307c683fe1157e1f1b8',0,'2026-11-25T03:09:18Z');
+INSERT INTO "codebook_versions" VALUES(3,'context',3,'main','codebook/context/v03.md','316de71fcb489e155571e307c683fe1157e1f1b8',1,'2026-11-25T03:09:18Z');
 CREATE TABLE dataset_loads (
     load_id      INTEGER PRIMARY KEY,
     dataset_path TEXT NOT NULL,

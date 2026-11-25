@@ -191,6 +191,36 @@ def test_mentioning_next_in_text_is_not_running_it(cmd):
     decide("Bash", None, command=cmd)
 
 
+def test_only_the_main_session_freezes():
+    cmd = ".venv/Scripts/python scripts/codebook.py freeze context"
+    decide("Bash", None, command=cmd)
+    for agent in (CONS, "labeler", "analyst"):
+        with pytest.raises(g.Blocked):
+            decide("Bash", agent, command=cmd)
+
+
+def test_a_frozen_series_blocks_the_consolidator_via_the_real_flag(repo, monkeypatch):
+    """#43: once `codebook.py freeze` sets the flag, the guard (reading labels.db) closes the series."""
+    db = repo / "labels.db"
+    monkeypatch.setenv("LABELS_DB", str(db))
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE codebook_versions (taxonomy TEXT, variant TEXT, version INT, frozen INT)")
+    con.execute("INSERT INTO codebook_versions VALUES ('context', 'main', 3, 1)")
+    con.commit()
+    con.close()
+    (repo / "codebook/context").mkdir(parents=True)
+    (repo / "codebook/context/v04.md").write_text("x")
+    event = {"tool_name": "Edit", "agent_type": CONS, "cwd": str(repo),
+             "tool_input": {"file_path": "codebook/context/v04.md"}}
+    with pytest.raises(g.Blocked, match="frozen"):
+        g.decide(event, is_committed=lambda r: False, root=repo)
+    with pytest.raises(g.Blocked, match="frozen"):
+        g.decide({"tool_name": "Bash", "agent_type": CONS, "tool_input": {
+            "command": ".venv/Scripts/python scripts/codebook.py next context --round 3"}})
+    g.decide({"tool_name": "Bash", "agent_type": CONS, "tool_input": {  # the other taxonomy stays open
+        "command": ".venv/Scripts/python scripts/codebook.py next purpose --round 1"}})
+
+
 # --- freeze flag and the real hook process ---------------------------------------
 
 def test_frozen_reads_labels_db(tmp_path, monkeypatch):
