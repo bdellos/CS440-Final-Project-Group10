@@ -74,6 +74,10 @@ context taxonomy) instead of emerging from open codes.
 5. Add nothing the brief doesn't say. If the brief is unclear, contradicts itself, or disagrees with
    a file it names, write the best faithful version and list each such point in your report.
 
+Later versions from the same brief: when the researchers add a dated decision to the brief, you get
+the taxonomy, the round and the decision's heading. Run `codebook.py next`, which copies the latest
+version, and apply only that decision, exactly where it says. Leave every other line as it was.
+
 ## Finish (all modes)
 
 Run `.venv/Scripts/python scripts/codebook.py check` and fix the new file until it passes. Then

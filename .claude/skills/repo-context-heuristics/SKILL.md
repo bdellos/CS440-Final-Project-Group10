@@ -60,6 +60,8 @@ with that work.
 - Tree dominated by shell, editor, terminal or agent configuration files rather than a product.
 - Skills tuned to that person's workflow; published as-is, not as a starter to fill in (that is a
   template).
+- Not a repo whose main content is the owner's own skills offered for others to install (an install
+  script, "use these skills" in the README): that is a catalog, even if one person wrote them all.
 
 **None of these**: for example an archive or mirror, or a repo whose purpose can't be told. Don't
 force a fit; follow the codebook (its catch-all category, or a proposal as the protocol describes).

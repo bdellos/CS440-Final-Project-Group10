@@ -113,7 +113,8 @@ def test_consolidator_works_only_through_next_and_its_tools():
                  "<!-- sources:", "<!-- unplaced:", "If any proposal for this taxonomy is still pending, stop",
                  "resulting_version_id", "codebook.py check", "after the researchers say Round 0 coding is complete",
                  "Mode C: a first version from a researcher brief", "exactly the brief's keys and names",
-                 "Copy the brief's examples exactly", "Add nothing the brief doesn't say"):
+                 "Copy the brief's examples exactly", "Add nothing the brief doesn't say",
+                 "apply only that decision, exactly where it says. Leave every other line as it was."):
         assert rule in text, rule
 
 

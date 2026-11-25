@@ -69,6 +69,18 @@ should become `PROPOSED_NEW` instead, for the researchers to decide.
 - Examples:
   - `zhu637882-stack/jiaoyi`: "test" (the whole description; nothing says what the repository is for)
 
+## Decisions after validation
+
+### For v02 (2026-11-24, after validating v01 on the Round 0 repos)
+
+One person's own collection of skills, published for others to install, is a `skill-catalog`, not
+`personal-config`. The test is what the repository offers: if its main content is skills offered for
+others to install, it is a catalog, whether the skills were collected from others or written by its
+owner. `personal-config` keeps only skills that are part of a broader personal environment
+(dotfiles, shell and editor configuration, a personal agent setup) and are not offered as a product.
+
+Apply this to the `skill-catalog` Include and to the `personal-config` Exclude; change nothing else.
+
 ## Notes for the consolidator
 
 - Write each kind in the codebook format (`codebook/README.md`). Definitions one or two sentences.
