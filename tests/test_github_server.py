@@ -229,6 +229,7 @@ def test_evidence_text_rebuilds_what_the_agent_saw_from_cache_only(tmp_path):
     assert len(fake.calls) == n                                    # no request at all
     from validate_label import quote_found
     for q in ("# Commit helper", "skills/a/SKILL.md", "fix: thing", "is_template: true", "skill_md_files: 2",
+              "metadata.is_template: true", "tree.skill_md_files: 2", "dataset.repo.language: TypeScript",
               "claude", "language: TypeScript", "skills-dir: 1", "convex-quickstart",
               "contents_also_in_other_repos: 1"):
         assert quote_found(q, text), q

@@ -50,15 +50,32 @@ def _norm(text):
     return " ".join(text.split())
 
 
-def quote_found(quote, text):
-    """True if quote occurs in text, ignoring whitespace; '...' may stand for elided text."""
-    hay, pos = _norm(text), 0
-    for part in (p for p in _ELLIPSIS.split(quote) if p.strip()):
-        i = hay.find(_norm(part), pos)
-        if i < 0:
-            return False
-        pos = i + len(_norm(part))
-    return True
+def quote_found(quote, text, bounded=False):
+    """True if quote occurs in text, ignoring whitespace; '...' may stand for elided text.
+    bounded: the quote must also start and end at a word boundary, so `files: 1` doesn't match
+    inside `files: 14` (used for repo quotes, whose structural facts are short, #22)."""
+    hay = _norm(text)
+    parts = [_norm(p) for p in _ELLIPSIS.split(quote) if p.strip()]
+    if not parts:
+        return False
+
+    def ok_start(i):
+        return not bounded or i == 0 or not (hay[i - 1].isalnum() or hay[i - 1] in "_.")
+
+    def ok_end(j):
+        return not bounded or j == len(hay) or not (hay[j].isalnum() or hay[j] == "_")
+
+    def search(k, pos):
+        part = parts[k]
+        i = hay.find(part, pos)
+        while i >= 0:
+            j = i + len(part)
+            if (k > 0 or ok_start(i)) and (k < len(parts) - 1 or ok_end(j)):
+                if k == len(parts) - 1 or search(k + 1, j):
+                    return True
+            i = hay.find(part, i + 1)
+        return False
+    return search(0, 0)
 
 
 def validate_label(record, con):
@@ -136,7 +153,7 @@ def validate_label(record, con):
     evidence = [(f"labels/{i}", ev) for i, lab in enumerate(record["labels"]) for ev in lab["evidence"]]
     evidence += [(f"proposals/{i}", ev) for i, p in enumerate(record["proposals"]) for ev in p["evidence"]]
     for where, ev in evidence:
-        if text is not None and not quote_found(ev["quote"], text):
+        if text is not None and not quote_found(ev["quote"], text, bounded=record["item_kind"] == "repo"):
             errors.append(f"evidence: {where}: quote not found in the {record['item_kind']} text: {ev['quote'][:80]!r}")
         if english and _norm(ev["quote_en"]) != _norm(ev["quote"]):
             errors.append(f"evidence: {where}: skill is English, so quote_en must equal quote")

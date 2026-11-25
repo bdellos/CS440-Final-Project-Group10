@@ -104,27 +104,28 @@ def _no_network(url, headers):
     raise NotCached(f"not in the GitHub cache: {url}")
 
 
-def _flatten(obj, key=None, out=None) -> list:
-    """Every string in obj, plus a `key: value` line for every scalar, the way the context-classifier
-    is told to quote structural facts (e.g. `is_template: true`, `skill_md_files: 240`)."""
+def _flatten(obj, key=None, out=None, path=None) -> list:
+    """Every string in obj, plus `key: value` and `dotted.path.key: value` lines for every scalar,
+    the way the context-classifier is told to quote structural facts (e.g. `is_template: true`,
+    `tree.skill_md_files: 240`)."""
     out = [] if out is None else out
     if isinstance(obj, dict):
         for k, v in obj.items():
-            if isinstance(v, (dict, list)):
-                if isinstance(v, dict) and k in ("locations",):  # counts keyed by name, e.g. `canonical: 3`
-                    out += [f"{kk}: {vv}" for kk, vv in v.items()]
-                _flatten(v, k, out)
-            else:
-                _flatten(v, k, out)
+            sub = f"{path}.{k}" if path else k
+            if isinstance(v, dict) and k in ("locations",):  # counts keyed by name, e.g. `canonical: 3`
+                out += [f"{kk}: {vv}" for kk, vv in v.items()]
+            _flatten(v, k, out, sub)
     elif isinstance(obj, list):
         for v in obj:
-            _flatten(v, key, out)
+            _flatten(v, key, out, path)
     else:
         if isinstance(obj, str):
             out.append(obj)
         if key is not None:
             val = "true" if obj is True else "false" if obj is False else "null" if obj is None else str(obj)
             out.append(f"{key}: {val}")
+            if path and path != key:
+                out.append(f"{path}: {val}")
     return out
 
 

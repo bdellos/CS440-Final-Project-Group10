@@ -285,3 +285,17 @@ def test_already_labeled_in_run(env):
 ])
 def test_quote_found(quote, found):
     assert quote_found(quote, "Intro.\nUse this skill when deploying\n  the service to production.") is found
+
+
+def test_bounded_quotes_for_repos():
+    """#22, found in the context v02 rerun: `skill_md_files: 1` matched inside `skill_md_files: 14`.
+    Repo quotes must start and end at a word boundary; skill quotes are unchanged."""
+    from validate_label import quote_found
+    text = "tree\nskill_md_files: 14\nmetadata.is_template: false\nA Flask web application."
+    assert quote_found("skill_md_files: 1", text)                     # plain substring: old behaviour
+    assert not quote_found("skill_md_files: 1", text, bounded=True)   # wrong number rejected
+    assert quote_found("skill_md_files: 14", text, bounded=True)
+    assert quote_found("metadata.is_template: false", text, bounded=True)
+    assert quote_found("A Flask web application.", text, bounded=True)
+    assert quote_found("A Flask ... application.", text, bounded=True)
+    assert not quote_found("Flask web app", text, bounded=True)        # cut mid-word

@@ -35,7 +35,9 @@ switch runs yourself. Then call `github_status` once to see the rate limit.
    evidence quoted exactly from the README, description, topics, paths, commit messages or dataset
    block, or a structural fact as `field: value`.
 
-If `available` is false, classify from the `dataset` block and say so in `notes`. If
+If `available` is false, the repo is gone from GitHub: follow the codebook's rule for that case (a
+repo with no dataset description is the catch-all kind, whatever its name suggests), and say in
+`notes` that only dataset fields were available. If
 `get_repo_context` fails because of the GitHub rate limit, stop and report how many repos are done:
 never label a repo you could not read. A rerun later continues from the cache.
 

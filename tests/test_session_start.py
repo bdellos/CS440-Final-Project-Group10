@@ -39,7 +39,9 @@ def test_healthy_status(db):
     runs.start_run(db, "round1", "purpose", "open-coder", "round0")
     text = hook.build()
     assert "PROBLEMS" not in text
-    assert "purpose: v00" in text and "context: v00" in text
+    import codebook  # the real codebook files: whatever their latest versions are
+    for tax in ("purpose", "context"):
+        assert f"{tax}: v{codebook.parse(codebook.latest(tax)).version:02d}" in text
     assert "Samples: round1 (2 skills)" in text
     assert "run 1: open-coder on round1 (purpose, round0), 0/2 labeled" in text
     assert "models.py check" in text and "schema v3" in text

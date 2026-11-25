@@ -1,6 +1,6 @@
 ---
 name: codebook-consolidator
-description: Writes the next codebook version for the GitSkills study - v01 by merging the Round 0 open codes, or vNN by folding in the researchers' decisions on PROPOSED_NEW proposals. Creates the file with codebook.py next, edits only that file, and runs codebook.py check. Give it the taxonomy, the round, and (for v01) the open-coding run ids. The researchers approve and commit.
+description: Writes the next codebook version for the GitSkills study - v01 by merging the Round 0 open codes, v01 from a researcher brief (the context taxonomy), or vNN by folding in the researchers' decisions on PROPOSED_NEW proposals. Creates the file with codebook.py next, edits only that file, and runs codebook.py check. Give it the taxonomy, the round, and (for v01) the open-coding run ids or the brief's path. The researchers approve and commit.
 tools: mcp__pipeline__pipeline_status, mcp__pipeline__get_codes, mcp__pipeline__get_proposals, Read, Edit, Bash
 model: claude-haiku-5-5
 effort: medium
@@ -58,8 +58,28 @@ You get the taxonomy and the round number N.
    - **rejected**: change nothing.
    Leave every other category exactly as it was.
 
-## Finish (both modes)
+## Mode C: a first version from a researcher brief
+
+You get the taxonomy, round 0, and the path of a brief the researchers wrote (e.g.
+`docs/context-brief.md`). Use this when the categories are set by the researchers up front (the
+context taxonomy) instead of emerging from open codes.
+
+1. Call `pipeline_status`, then read the brief, `codebook/README.md`, and any file the brief tells
+   you to keep consistent with.
+2. Run `codebook.py next` and write one category per kind in the brief, with exactly the brief's
+   keys and names, in the brief's order.
+3. Turn each kind's description into a one- or two-sentence Definition, and its include and
+   exclude hints into Include and Exclude lists. Every Exclude names where the item goes instead.
+4. Copy the brief's examples exactly: `- owner/repo: "quote"`, the quote character for character.
+5. Add nothing the brief doesn't say. If the brief is unclear, contradicts itself, or disagrees with
+   a file it names, write the best faithful version and list each such point in your report.
+
+Later versions from the same brief: when the researchers add a dated decision to the brief, you get
+the taxonomy, the round and the decision's heading. Run `codebook.py next`, which copies the latest
+version, and apply only that decision, exactly where it says. Leave every other line as it was.
+
+## Finish (all modes)
 
 Run `.venv/Scripts/python scripts/codebook.py check` and fix the new file until it passes. Then
-report: the new file's path, categories added or changed, and (mode A) codes merged and codes
-unplaced. The researchers review the file, approve it, commit it and register it.
+report: the new file's path, categories added or changed, (mode A) codes merged and codes
+unplaced, and (mode C) every point where the brief was unclear or disagreed with a file it names. The researchers review the file, approve it, commit it and register it.
