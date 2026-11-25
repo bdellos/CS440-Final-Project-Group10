@@ -7,6 +7,7 @@ human: an agent must never be able to create labels recorded as a person's.
 
     .venv/Scripts/python scripts/runs.py start --sample round0 --taxonomy purpose --rater brendan --purpose round0
     .venv/Scripts/python scripts/runs.py finish 12 [--allow-incomplete]
+    .venv/Scripts/python scripts/runs.py note 6 "Category list was AI-assisted ..." --by brendan
 """
 import argparse
 import re
@@ -132,6 +133,25 @@ def batch_agreement(con, run_id: int) -> list:
     return out
 
 
+def add_note(con, run_id: int, text: str, by: str) -> str:
+    """Append a dated researcher note to a run's notes (the original notes are kept). For facts
+    learned after a run, e.g. how a human coder built their categories."""
+    if not re.fullmatch(r"[a-z]+", by or ""):
+        raise RunError("--by must be your lowercase first name")
+    text = " ".join((text or "").split())
+    if not text:
+        raise RunError("the note is empty")
+    row = con.execute("SELECT notes FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+    if row is None:
+        raise RunError(f"run {run_id} does not exist")
+    from datetime import date
+    entry = f"[note {date.today().isoformat()} by {by}] {text}"
+    with con:
+        con.execute("UPDATE runs SET notes = ? WHERE run_id = ?",
+                    ((row[0] + "\n" if row[0] else "") + entry, run_id))
+    return entry
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -146,6 +166,10 @@ def main():
     f = sub.add_parser("finish", help="finish a run")
     f.add_argument("run_id", type=int)
     f.add_argument("--allow-incomplete", action="store_true")
+    n = sub.add_parser("note", help="append a researcher note to a run (humans only)")
+    n.add_argument("run_id", type=int)
+    n.add_argument("text")
+    n.add_argument("--by", required=True, help="your first name, lowercase")
     a = p.parse_args()
     con = connect()
     try:
@@ -153,6 +177,8 @@ def main():
             r = start_run(con, a.sample, a.taxonomy, a.rater, a.purpose, a.codebook_version, a.codebook_variant,
                           a.notes, human=True)
             print(f"started human run {r['run_id']}: {r['rater']} on {r['sample']} ({r['items']} items)")
+        elif a.cmd == "note":
+            print(f"run {a.run_id}: {add_note(con, a.run_id, a.text, a.by)}")
         else:
             r = finish_run(con, a.run_id, a.allow_incomplete)
             print(f"finished run {r['run_id']}: {r['labeled']}/{r['items']} labeled")

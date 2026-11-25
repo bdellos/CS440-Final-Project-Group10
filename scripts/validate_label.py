@@ -94,6 +94,12 @@ def validate_label(record, con):
         return [f"run: run_id {record['run_id']} does not exist"]
     if run["finished_at"] is not None:
         errors.append(f"run: run {run['run_id']} is finished; start a new run")
+    # Only researchers' imported Round 0 open codes may lack evidence (decided 2026-11-25); the
+    # schema allows it in open coding, so agents are held to it here.
+    if run["rater_kind"] != "human":
+        for i, lab in enumerate(record["labels"]):
+            if not lab["evidence"]:
+                errors.append(f"evidence: labels/{i}: at least one quote is required")
     if run["taxonomy"] != record["taxonomy"]:
         errors.append(f"run: taxonomy is {record['taxonomy']!r} but run {run['run_id']} is {run['taxonomy']!r}")
     if run["cb_version"] != record["codebook_version"]:

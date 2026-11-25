@@ -168,3 +168,30 @@ def test_cli_starts_and_finishes_a_human_run(env):
     run_id = out.stdout.split("human run ")[1].split(":")[0]
     fin = subprocess.run([py, "scripts/runs.py", "finish", run_id], cwd=ROOT, env=e, capture_output=True, text=True)
     assert fin.returncode != 0 and "unlabeled" in fin.stderr
+
+
+# --- note ---------------------------------------------------------------------------
+
+def test_note_appends_and_keeps_the_original(env):
+    r = runs.start_run(env["con"], "s1", "purpose", "brendan", "round0", notes="imported", human=True)
+    runs.add_note(env["con"], r["run_id"], "Category list was  AI-assisted.", "brendan")
+    notes = env["con"].execute("SELECT notes FROM runs WHERE run_id = ?", (r["run_id"],)).fetchone()[0]
+    first, second = notes.split("\n")
+    assert first == "imported" and second.endswith("by brendan] Category list was AI-assisted.")
+
+
+@pytest.mark.parametrize("run_id, text, by, expect", [(99, "x", "brendan", "does not exist"),
+                                                      (1, "  ", "brendan", "empty"),
+                                                      (1, "x", "Brendan", "lowercase first name")])
+def test_note_refusals(env, run_id, text, by, expect):
+    runs.start_run(env["con"], "s1", "purpose", "brendan", "round0", human=True)
+    with pytest.raises(runs.RunError, match=expect):
+        runs.add_note(env["con"], run_id, text, by)
+
+
+def test_agents_cannot_add_notes():
+    sys.path.insert(0, str(ROOT / "scripts" / "hooks"))
+    import labels_guard
+    with pytest.raises(labels_guard.Blocked):
+        labels_guard.decide({"tool_name": "Bash", "agent_type": "labeler",
+                             "tool_input": {"command": ".venv/Scripts/python scripts/runs.py note 6 hi --by brendan"}})
