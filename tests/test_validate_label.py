@@ -163,6 +163,21 @@ def test_repo_quotes_are_checked_against_cached_context(env, monkeypatch):
     assert ok, e
 
 
+def test_a_bare_field_name_is_not_evidence(env, monkeypatch):
+    """#22, found in context run 3: "homepage" passed because the word occurs in the repo text, but a
+    field name without its value shows nothing. Topics and paths stay valid single-token evidence."""
+    import github_server
+    text = "homepage: null\nis_template: true\ntopics\nclaude-skills\nskills/a/SKILL.md"
+    monkeypatch.setattr(github_server, "evidence_text", lambda repo: text)
+    ok, e = has(errs(env, repo_record(env, "homepage")), "'homepage' is a field name")
+    assert ok, e
+    ok, e = has(errs(env, repo_record(env, "is_template")), "is a field name")
+    assert ok, e
+    assert errs(env, repo_record(env, "is_template: true")) == []
+    assert errs(env, repo_record(env, "claude-skills")) == []          # a topic
+    assert errs(env, repo_record(env, "skills/a/SKILL.md")) == []      # a path
+
+
 # --- schema (shape) -------------------------------------------------------
 
 @pytest.mark.parametrize("mutate, expect", [

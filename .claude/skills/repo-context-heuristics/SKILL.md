@@ -95,3 +95,5 @@ Follow the protocol's quoting rules. Good evidence here:
   `is_template: true` or `skill_md_files: 240`.
 
 Use one or two README or description quotes whenever they exist; structural facts support them.
+Never quote a field name on its own (`homepage`, `is_template`): it shows nothing and is rejected.
+Always give the field with its value.
