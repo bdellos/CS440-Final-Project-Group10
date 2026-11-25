@@ -21,6 +21,12 @@ CREATE TABLE categories (
     definition   TEXT NOT NULL,
     PRIMARY KEY (codebook_version_id, category_key)
 ) STRICT;
+INSERT INTO "categories" VALUES(1,'operational-project','Operational project','The repository exists to build or run something else (an application, library, service, tool or research code), and its skills support work on that project.');
+INSERT INTO "categories" VALUES(1,'skill-catalog','Catalog or collection of skills','The skills themselves are the product: the repository collects, curates, lists or distributes skills for others to install or copy.');
+INSERT INTO "categories" VALUES(1,'template','Template or starter','The repository is meant to be copied as the start of a new project.');
+INSERT INTO "categories" VALUES(1,'demonstration','Demonstration, example or tutorial','The repository shows how something works or teaches it, and is not meant for real use as is.');
+INSERT INTO "categories" VALUES(1,'personal-config','Personal configuration','A person''s own environment setup (dotfiles, editor and shell configuration, personal agent setup), with skills as part of that configuration.');
+INSERT INTO "categories" VALUES(1,'unclear','Unclear or other','The kind cannot be told from the repository (empty or missing README, deleted repository with little metadata), or it fits none of the kinds above. Use sparingly: a repository that fits a kind imperfectly gets that kind; repeated "other" cases with something in common become a PROPOSED_NEW for the researchers.');
 CREATE TABLE codebook_versions (
     codebook_version_id INTEGER PRIMARY KEY,
     taxonomy     TEXT NOT NULL CHECK (taxonomy IN ('purpose', 'context')),
@@ -32,6 +38,7 @@ CREATE TABLE codebook_versions (
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     UNIQUE (taxonomy, variant, version)
 ) STRICT;
+INSERT INTO "codebook_versions" VALUES(1,'context',1,'main','codebook/context/v01.md','4e1e7af45a88914df288c501af5ee0e2c1d023c6',0,'2026-11-25T00:10:59Z');
 CREATE TABLE dataset_loads (
     load_id      INTEGER PRIMARY KEY,
     dataset_path TEXT NOT NULL,
