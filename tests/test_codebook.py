@@ -235,3 +235,37 @@ def test_register_warns_when_a_decision_is_missing_from_the_version(repo, con):
     msg = codebook.register(repo.path / "codebook/purpose/v02.md", con)
     assert "accepted proposal #1 (Gamma) has no category" in msg
     assert "merged into 'beta', which this version lacks" in msg
+
+
+# --- freeze (#43) -----------------------------------------------------------------
+
+def _git_out(repo, *a):
+    return subprocess.run(["git", *a], cwd=repo.path, capture_output=True, text=True).stdout.strip()
+
+
+def test_freeze_sets_the_flag_and_tags_the_commit(repo, con):
+    repo.write("codebook/purpose/v01.md", doc(body=category()))
+    repo.commit("v01")
+    codebook.register(repo.path / "codebook/purpose/v01.md", con)
+    msg = codebook.freeze("purpose", con)
+    assert "frozen at v01" in msg and "codebook-purpose-v01-frozen" in msg
+    assert con.execute("SELECT frozen FROM codebook_versions WHERE version = 1").fetchone()[0] == 1
+    assert _git_out(repo, "rev-parse", "codebook-purpose-v01-frozen^{commit}") == _git_out(repo, "rev-parse", "HEAD")
+    assert "already frozen" in codebook.freeze("purpose", con)          # idempotent
+    with pytest.raises(Exception, match="frozen"):                          # db trigger now blocks category changes
+        con.execute("DELETE FROM categories")
+
+
+def test_freeze_refuses_unregistered_newer_file_and_pending_proposals(repo, con):
+    with pytest.raises(SystemExit, match="no registered"):
+        codebook.freeze("purpose", con)
+    repo.write("codebook/purpose/v01.md", doc(body=category() + category("beta", "Beta")))
+    repo.commit("v01")
+    codebook.register(repo.path / "codebook/purpose/v01.md", con)
+    _proposals_against_v01(con, [("Zeta", "pending", None)])
+    with pytest.raises(SystemExit, match="still pending"):
+        codebook.freeze("purpose", con, tag=False)
+    con.execute("UPDATE proposals SET status = 'rejected', decided_by = 'both'")
+    repo.write("codebook/purpose/v02.md", doc(2, 1, 2, body=category()))
+    with pytest.raises(SystemExit, match="newer than the registered v01"):
+        codebook.freeze("purpose", con, tag=False)

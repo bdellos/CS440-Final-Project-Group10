@@ -153,7 +153,13 @@ def validate_label(record, con):
     evidence = [(f"labels/{i}", ev) for i, lab in enumerate(record["labels"]) for ev in lab["evidence"]]
     evidence += [(f"proposals/{i}", ev) for i, p in enumerate(record["proposals"]) for ev in p["evidence"]]
     for where, ev in evidence:
-        if text is not None and not quote_found(ev["quote"], text, bounded=record["item_kind"] == "repo"):
+        bare = ev["quote"].strip()
+        if record["item_kind"] == "repo" and text is not None and re.fullmatch(r"[\w.]+", bare) \
+                and re.search(rf"(?<![\w.]){re.escape(bare)}: ", text):
+            # #22: a field name alone ("homepage") occurs in the text but shows nothing; facts need their value
+            errors.append(f"evidence: {where}: {bare!r} is a field name; quote it with its value as `{bare}: <value>`, "
+                          "or quote a phrase from the README or description")
+        elif text is not None and not quote_found(ev["quote"], text, bounded=record["item_kind"] == "repo"):
             errors.append(f"evidence: {where}: quote not found in the {record['item_kind']} text: {ev['quote'][:80]!r}")
         if english and _norm(ev["quote_en"]) != _norm(ev["quote"]):
             errors.append(f"evidence: {where}: skill is English, so quote_en must equal quote")
