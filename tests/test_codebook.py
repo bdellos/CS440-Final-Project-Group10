@@ -187,3 +187,51 @@ def test_register_refuses_invalid(repo, con):
     repo.commit("bad")
     with pytest.raises(SystemExit, match="has errors"):
         codebook.register(repo.path / "codebook/purpose/v01.md", con)
+
+
+# --- register takes in decided proposals (#42) -----------------------------------
+
+def _proposals_against_v01(con, decisions):
+    """A human run on v01 with one annotation per proposal; decisions: [(name, status, merged_into)]."""
+    v1 = con.execute("SELECT codebook_version_id FROM codebook_versions WHERE version = 1").fetchone()[0]
+    con.execute("INSERT INTO samples (name, item_kind, method) VALUES ('r1', 'skill', 'test')")
+    run = con.execute("INSERT INTO runs (sample_id, taxonomy, codebook_version_id, rater_kind, rater, purpose) "
+                      "VALUES (1, 'purpose', ?, 'human', 'brendan', 'round')", (v1,)).lastrowid
+    ids = []
+    for i, (name, status, merged) in enumerate(decisions):
+        ann = con.execute("INSERT INTO annotations (run_id, item_id) VALUES (?, ?)", (run, f"item{i}")).lastrowid
+        ids.append(con.execute(
+            "INSERT INTO proposals (annotation_id, proposed_name, definition, justification, status, merged_into, "
+            "decided_by) VALUES (?, ?, 'd', 'j', ?, ?, ?)",
+            (ann, name, status, merged, None if status == "pending" else "both")).lastrowid)
+    con.commit()
+    return ids
+
+
+def test_register_takes_in_decided_proposals(repo, con):
+    repo.write("codebook/purpose/v01.md", doc(body=category() + category("beta", "Beta")))
+    repo.commit("v01")
+    codebook.register(repo.path / "codebook/purpose/v01.md", con)
+    acc, mer, rej, pen = _proposals_against_v01(con, [("Gamma Thing", "accepted", None), ("Delta", "merged", "beta"),
+                                                     ("Epsilon", "rejected", None), ("Zeta", "pending", None)])
+    repo.write("codebook/purpose/v02.md", doc(2, 1, 2, body=category() + category("beta", "Beta")
+                                              + category("gamma-thing", "Gamma thing")))
+    repo.commit("v02")
+    msg = codebook.register(repo.path / "codebook/purpose/v02.md", con)
+    v2 = con.execute("SELECT codebook_version_id FROM codebook_versions WHERE version = 2").fetchone()[0]
+    got = dict(con.execute("SELECT proposal_id, resulting_version_id FROM proposals"))
+    assert got == {acc: v2, mer: v2, rej: None, pen: None}
+    assert f"took in 2 decided proposal(s): #{acc}, #{mer}" in msg
+    assert "Zeta) is still pending" in msg and "has no category" not in msg
+
+
+def test_register_warns_when_a_decision_is_missing_from_the_version(repo, con):
+    repo.write("codebook/purpose/v01.md", doc(body=category() + category("beta", "Beta")))
+    repo.commit("v01")
+    codebook.register(repo.path / "codebook/purpose/v01.md", con)
+    _proposals_against_v01(con, [("Gamma", "accepted", None), ("Delta", "merged", "beta")])
+    repo.write("codebook/purpose/v02.md", doc(2, 1, 2, body=category()))     # forgot gamma, dropped beta
+    repo.commit("v02")
+    msg = codebook.register(repo.path / "codebook/purpose/v02.md", con)
+    assert "accepted proposal #1 (Gamma) has no category" in msg
+    assert "merged into 'beta', which this version lacks" in msg

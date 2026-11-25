@@ -303,8 +303,42 @@ def register(path, con) -> str:
             (cb.taxonomy, cb.version, cb.variant, cb.path, commit)).lastrowid
         con.executemany("INSERT INTO categories (codebook_version_id, category_key, name, definition) VALUES (?, ?, ?, ?)",
                         [(vid, c.key, c.name, c.definition) for c in cb.categories])
-    return f"{cb.path}: registered as {cb.taxonomy}/{cb.variant} v{cb.version:02d} " \
-           f"({len(cb.categories)} categories, commit {commit[:8]})"
+        linked, warnings = _link_proposals(con, cb, vid)
+    msg = f"{cb.path}: registered as {cb.taxonomy}/{cb.variant} v{cb.version:02d} " \
+          f"({len(cb.categories)} categories, commit {commit[:8]})"
+    if linked:
+        msg += f"\n  took in {len(linked)} decided proposal(s): " + ", ".join(f"#{i}" for i in linked)
+    return msg + "".join(f"\n  warning: {w}" for w in warnings)
+
+
+def _link_proposals(con, cb: Codebook, version_id: int) -> tuple:
+    """Mark the accepted and merged proposals made against earlier versions of this series as taken
+    in by the new version (proposals.resulting_version_id, #42), so the consolidator never folds the
+    same proposal in twice. Warns when the new version doesn't seem to contain one, or when proposals
+    are still pending."""
+    rows = con.execute(
+        """SELECT p.proposal_id, p.proposed_name, p.status, p.merged_into
+           FROM proposals p JOIN annotations a USING (annotation_id) JOIN runs r USING (run_id)
+           JOIN codebook_versions v ON v.codebook_version_id = r.codebook_version_id
+           WHERE v.taxonomy = ? AND v.variant = ? AND v.version < ? AND p.resulting_version_id IS NULL""",
+        (cb.taxonomy, cb.variant, cb.version)).fetchall()
+    keys = {c.key for c in cb.categories}
+    names = {c.name.strip().lower() for c in cb.categories}
+    linked, warnings = [], []
+    for pid, name, status, merged_into in rows:
+        if status == "pending":
+            warnings.append(f"proposal #{pid} ({name}) is still pending; it was not taken in")
+            continue
+        if status == "rejected":
+            continue
+        if status == "accepted" and re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") not in keys \
+                and name.strip().lower() not in names:
+            warnings.append(f"accepted proposal #{pid} ({name}) has no category with that name or key here")
+        if status == "merged" and merged_into not in keys:
+            warnings.append(f"proposal #{pid} ({name}) was merged into {merged_into!r}, which this version lacks")
+        con.execute("UPDATE proposals SET resulting_version_id = ? WHERE proposal_id = ?", (version_id, pid))
+        linked.append(pid)
+    return linked, warnings
 
 
 def main():
