@@ -324,6 +324,27 @@ def main():
         md += ["", "Per-category kappa (binary):", ""]
         md += md_table(["Category", "Labeler uses", "Skeptic uses", "Kappa"],
                        [(f"`{c}`", u[0], u[1], kappa.fmt(comp["per_category"][c])) for c, u in comp["uses"].items()])
+    # full-text relabel (get_skill fix): earlier run vs latest run per sample and rater
+    sys.path.insert(0, str(ROOT / "analysis"))
+    import kappa as _k
+    pairs = []
+    for s in FINAL_SAMPLES:
+        for rater in ("labeler", "skeptic"):
+            ids = [r[0] for r in con.execute(
+                """SELECT r.run_id FROM runs r JOIN samples x USING (sample_id) WHERE x.name = ? AND r.rater = ?
+                   AND r.taxonomy = 'purpose' AND r.codebook_version_id = ? AND r.finished_at IS NOT NULL
+                   ORDER BY r.run_id""", (s, rater, pcv[0]))]
+            if len(ids) > 1:
+                c = _k.compare(_k.labels_of(con, ids[0]), _k.labels_of(con, ids[-1]))
+                pairs.append((s, rater, ids[0], ids[-1], c))
+    if pairs:
+        md += ["", "## Full-text relabel: earlier vs latest run", "",
+               "Runs before the get_skill fix (commit 544e94f) could cap the skill text they read; run 24 "
+               "reported about 30 skills labeled from partial text. These samples were relabeled with the full "
+               "text; every table above uses the latest run. Agreement between the two runs mixes the effect "
+               "of the full text with ordinary run-to-run variation.", ""]
+        md += md_table(["Sample", "Rater", "Earlier run", "Latest run", "Items", "Exact agreement", "Kappa"],
+                       [(s, r, a, b, c["n"], f"{c['exact']:.0%}", _k.fmt(c["kappa"])) for s, r, a, b, c in pairs])
     (OUT / "results.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}/results.md and 5 figures; final set {n} skills"
           + (f"; missing purpose runs: {missing}" if missing else ""))
