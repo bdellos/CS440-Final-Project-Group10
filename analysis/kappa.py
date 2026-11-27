@@ -14,6 +14,8 @@ Agreement is computed on the items both raters labeled:
     only matches the same two labels (strict; most items have one label);
   - exact agreement (share of identical label sets) and how many items had more than one label;
   - per category, a binary kappa (has the label / doesn't), to show which categories are reliable.
+  - where they differ: every pair of label sets the two raters gave the same item, most frequent
+    first (a confusion list; the off-diagonal of the confusion matrix).
 Kappa is undefined (shown as n/a) when both raters use a single value for every item.
 """
 import argparse
@@ -81,6 +83,12 @@ def compare(x: dict, y: dict) -> dict:
             "per_category": per_cat, "uses": {c: (sum(c in s for s in a), sum(c in s for s in b)) for c in cats}}
 
 
+def confusions(x: dict, y: dict) -> list:
+    """[(count, labels of x, labels of y)] for the shared items where the label sets differ, most frequent first."""
+    pairs = Counter((" + ".join(sorted(x[i])), " + ".join(sorted(y[i]))) for i in x.keys() & y.keys() if x[i] != y[i])
+    return [(n, a, b) for (a, b), n in sorted(pairs.items(), key=lambda kv: (-kv[1], kv[0]))]
+
+
 def fmt(k):
     return "n/a" if k is None else f"{k:.2f}"
 
@@ -110,6 +118,12 @@ def report(con) -> str:
                         f"| Category | Uses ({r1}) | Uses ({r2}) | Kappa |", "|---|---|---|---|"]
             details += [f"| `{cat}` | {u[0]} | {u[1]} | {fmt(c['per_category'][cat])} |"
                         for cat, u in c["uses"].items()]
+            conf = confusions(labels[r1], labels[r2])
+            if conf:
+                details += ["", f"### {taxonomy}: {r1} vs {r2}, where they differ "
+                            f"({sum(n for n, _, _ in conf)} of {c['n']} items)", "",
+                            f"| Items | {r1} | {r2} |", "|---|---|---|"]
+                details += [f"| {n} | {a} | {b} |" for n, a, b in conf]
         out += details + [""]
     return "\n".join(out)
 
