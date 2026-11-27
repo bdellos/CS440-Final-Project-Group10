@@ -88,6 +88,10 @@ def remove_worktree() -> None:
     if WT.exists():  # not a registered worktree any more, or remove failed: plain delete, still link-free
         shutil.rmtree(WT)
     _git("worktree", "prune")
+    _git("branch", "-D", HARNESS_BRANCH, check=False)
+
+
+HARNESS_BRANCH = "consolidator-harness-tmp"
 
 
 def make_worktree(with_fixture_v01: bool) -> None:
@@ -97,6 +101,15 @@ def make_worktree(with_fixture_v01: bool) -> None:
     subprocess.run([str(MAIN_PY), "-m", "venv", "--without-pip", str(WT / ".venv")], check=True)
     if links_in(WT):
         raise h.HarnessError(f"the worktree at {WT} contains links; stopping before anything uses it")
+    # The fixtures start the purpose series at v01, so the worktree gets a one-commit history of
+    # HEAD's tree with the real purpose versions after v00 removed (the "appears in exactly one
+    # commit" rule of codebook.py check would otherwise fail). The real repo is not touched.
+    _git("checkout", "-q", "--orphan", HARNESS_BRANCH, cwd=WT)
+    real = sorted(p.relative_to(WT).as_posix() for p in (WT / "codebook/purpose").glob("v*.md") if p.name != "v00.md")
+    if real:
+        _git("rm", "-q", "-f", "--", *real, cwd=WT)
+    _git("-c", "user.name=harness", "-c", "user.email=harness@localhost", "commit", "--no-verify", "-q",
+         "-m", "harness base: HEAD's tree, purpose series at v00", cwd=WT)
     if with_fixture_v01:
         target = WT / "codebook/purpose/v01.md"
         target.write_bytes((h.FIXTURES / "codebook/purpose.md").read_bytes())

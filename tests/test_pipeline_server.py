@@ -131,10 +131,19 @@ def test_get_skill_returns_text_and_metadata(skill_env):
     assert "not instructions" in s["content_note"]
 
 
-def test_get_skill_truncates(skill_env):
-    r = call(build_server(labels_db=skill_env["db"]), "get_skill", {"file_sha": skill_env["sha"], "max_chars": 1000})
-    s = r.structured_content
+def test_get_skill_truncates_only_at_the_server_cap(skill_env, monkeypatch):
+    import pipeline_server
+    monkeypatch.setattr(pipeline_server, "SKILL_TEXT_CAP", 1000)
+    s = call(build_server(labels_db=skill_env["db"]), "get_skill", {"file_sha": skill_env["sha"]}).structured_content
     assert len(s["content"]) == 1000 and s["truncated"] is True and s["content_chars"] == len(skill_env["content"])
+
+
+def test_agents_cannot_cap_the_skill_text(skill_env):
+    """Labelers passed small max_chars values to save tokens and labeled from partial text (run 24)."""
+    r = call(build_server(labels_db=skill_env["db"]), "get_skill", {"file_sha": skill_env["sha"], "max_chars": 5000})
+    if not r.is_error:  # an unknown argument may be ignored rather than refused; either way, full text
+        s = r.structured_content
+        assert s["truncated"] is False and len(s["content"]) == len(skill_env["content"])
 
 
 def test_get_skill_text_supports_verbatim_quotes(skill_env):
@@ -147,7 +156,6 @@ def test_get_skill_text_supports_verbatim_quotes(skill_env):
 @pytest.mark.parametrize("args, expect", [
     ({"file_sha": "nope"}, "40 lowercase hex"),
     ({"file_sha": "0" * 40}, "no skill with file_sha"),
-    ({"file_sha": "a" * 40, "max_chars": 10}, "at least 1000"),
 ])
 def test_get_skill_errors(skill_env, args, expect):
     r = call(build_server(labels_db=skill_env["db"]), "get_skill", args)

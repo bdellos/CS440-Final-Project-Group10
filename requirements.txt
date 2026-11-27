@@ -5,6 +5,7 @@ jsonschema==4.26.0
 langdetect==1.0.9
 mcp==2.3.0
 openpyxl==3.1.5
+matplotlib==3.11.2   # analysis/results.py figures
 
 # tests:  .venv\Scripts\python -m pytest tests
 pytest==9.2.0
