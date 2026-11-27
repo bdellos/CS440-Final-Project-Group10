@@ -4,7 +4,7 @@ The order to work through the GitHub issues, based on what each one depends on. 
 
 Issues and milestones live on GitHub: https://github.com/bdellos/CS440-Final-Project-Group10/milestones.
 
-**Status (2026-11-25):** the build track (steps 1–6) is done, apart from the parts of #1 and #20 that wait on later steps. The context codebook (#41) is done (v03, validated on the Round 0 repos). Both researchers have filled in their Round 0 workbooks, so the gate is effectively open: next is the Round 0 purpose flow (step 7).
+**Status (2026-11-26):** done apart from the write-up. Both codebooks are frozen (purpose v02, context v03), 1,000 skills are labeled for both taxonomies, the held-out kappa is computed, and the results are in `analysis/results/`. Open: the report ([#5](https://github.com/bdellos/CS440-Final-Project-Group10/issues/5)), the README's last pass ([#20](https://github.com/bdellos/CS440-Final-Project-Group10/issues/20)) and the language caveat in the report ([#54](https://github.com/bdellos/CS440-Final-Project-Group10/issues/54)).
 
 ## Build track ✅
 
@@ -36,45 +36,39 @@ The GitSkills SQLite file stays read-only and is `ATTACH`ed from a small project
 - ✅ [#62](https://github.com/bdellos/CS440-Final-Project-Group10/issues/62) agent test harness: open-coder, labeler, skeptic and context-classifier pass on fixtures, including hostile items
 - ✅ [#37](https://github.com/bdellos/CS440-Final-Project-Group10/issues/37) prompt caching: automatic inside Claude Code (80–83% of input cached); Batch API part moved to #44
 
-### 6. Prove it works
-- [#1](https://github.com/bdellos/CS440-Final-Project-Group10/issues/1) end-to-end smoke test: **passed on fixtures** (sampler → context-classifier → labeler → skeptic). Still open for the real run on sample `smoke1`, which needs purpose v01 (#40); it ends with the analyst (#27).
-- [#20](https://github.com/bdellos/CS440-Final-Project-Group10/issues/20) README: **first draft merged**. Stays open until it's finalised with the report (#5).
+### 6. Prove it works ✅
+- ✅ [#1](https://github.com/bdellos/CS440-Final-Project-Group10/issues/1) end-to-end smoke test: passed on fixtures (sampler → context-classifier → labeler → skeptic); the real `smoke1` run was superseded by the same chain running on real data in every round.
+- [#20](https://github.com/bdellos/CS440-Final-Project-Group10/issues/20) README: final version in PR #78; last pass after the report ([#5](https://github.com/bdellos/CS440-Final-Project-Group10/issues/5)).
 
-## Gate: Round 0 coding ([#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3), [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4))
+## Gate: Round 0 coding ✅ ([#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3), [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4))
 
-Both researchers finished their Round 0 workbooks (2026-11-25); #3 and #4 can be closed. The workbooks live in the git-ignored `data/round0/`, so keep a backup outside the repo. Rules that still hold: the open-coder works from the skills alone (no seed categories), and Round 0 skills are never used as test data.
+Both researchers finished their Round 0 workbooks (2026-11-25); they are committed in `coding/round0/`.
 
-## Research track
+## Research track ✅
 
-### 7. Round 0 (purpose)
-- [#64](https://github.com/bdellos/CS440-Final-Project-Group10/issues/64) consolidator harness test, in a throwaway worktree (must pass before #40)
-- Import both workbooks as human open-coding runs (a small script a person runs; gap noted on [#40](https://github.com/bdellos/CS440-Final-Project-Group10/issues/40) and [#47](https://github.com/bdellos/CS440-Final-Project-Group10/issues/47))
-- [#39](https://github.com/bdellos/CS440-Final-Project-Group10/issues/39) agent open-codes the Round 0 sample
-- → [#40](https://github.com/bdellos/CS440-Final-Project-Group10/issues/40) the consolidator merges the three code lists into purpose v01; its `sources` / `unplaced` comments are the comparison record
-- ✅ [#41](https://github.com/bdellos/CS440-Final-Project-Group10/issues/41) context codebook: v01 from the researchers' brief, refined to v03; runs 2 and 3 agree on all 50 Round 0 repos
+### 7. Round 0 (purpose) ✅
+- ✅ [#64](https://github.com/bdellos/CS440-Final-Project-Group10/issues/64) consolidator harness test, in a throwaway worktree
+- ✅ [#39](https://github.com/bdellos/CS440-Final-Project-Group10/issues/39) agent open-codes the Round 0 sample; both workbooks imported as human open-coding runs (`scripts/import_round0.py`)
+- ✅ [#40](https://github.com/bdellos/CS440-Final-Project-Group10/issues/40) purpose v01 from the agent's and one researcher's codes; which lists were used and why, and the framing: `docs/purpose-brief.md`
+- ✅ [#41](https://github.com/bdellos/CS440-Final-Project-Group10/issues/41) context codebook: v01 from the researchers' brief, refined to v03
 
-### 8. Iterate to saturation
-- Before round 1: a script to record the researchers' accept / merge / reject decisions on `PROPOSED_NEW`, and `codebook.py register` setting `resulting_version_id` (gaps noted on [#42](https://github.com/bdellos/CS440-Final-Project-Group10/issues/42))
-- [#42](https://github.com/bdellos/CS440-Final-Project-Group10/issues/42) rounds 1 to N (purpose, and context alongside) → [#43](https://github.com/bdellos/CS440-Final-Project-Group10/issues/43) saturation check and codebook freeze
+### 8. Iterate to saturation ✅
+- ✅ [#42](https://github.com/bdellos/CS440-Final-Project-Group10/issues/42) one round per taxonomy (100 skills each) → ✅ [#43](https://github.com/bdellos/CS440-Final-Project-Group10/issues/43) both froze after round 1: purpose v02 (one new category, `version-control`), context v03 (no new categories)
 
-### 9. Final labeling and analysis
-- [#27](https://github.com/bdellos/CS440-Final-Project-Group10/issues/27) analyst agent (can be built any time before this step). ✅ [#31](https://github.com/bdellos/CS440-Final-Project-Group10/issues/31) msr-report skill is written, but its file sits at `.claude/skills/msr-report-SKILL.md`; it has to move to `.claude/skills/msr-report/SKILL.md` for Claude Code to load it and for the skill tests to cover it.
-- [#44](https://github.com/bdellos/CS440-Final-Project-Group10/issues/44) Batch API (with a cost estimate on a small real batch first) → [#2](https://github.com/bdellos/CS440-Final-Project-Group10/issues/2) full-dataset labeling run
-- [#45](https://github.com/bdellos/CS440-Final-Project-Group10/issues/45) / [#46](https://github.com/bdellos/CS440-Final-Project-Group10/issues/46) hand-label the held-out set (after #43) → [#47](https://github.com/bdellos/CS440-Final-Project-Group10/issues/47) Cohen's kappa
-- [#48](https://github.com/bdellos/CS440-Final-Project-Group10/issues/48) labeler vs skeptic disagreements
-- [#49](https://github.com/bdellos/CS440-Final-Project-Group10/issues/49) seeded vs agent-only ablation (possible once #40 has produced both codebooks)
-- [#50](https://github.com/bdellos/CS440-Final-Project-Group10/issues/50) purpose × context cross-tab (context frequencies are per skill)
-- [#54](https://github.com/bdellos/CS440-Final-Project-Group10/issues/54) results by language and the English-only validity note
-- [#51](https://github.com/bdellos/CS440-Final-Project-Group10/issues/51) codebook evolution figure
+### 9. Final labeling and analysis ✅
+- ✅ [#2](https://github.com/bdellos/CS440-Final-Project-Group10/issues/2) final labeling: 1,000 skills from the sample dataset for both taxonomies (no full-dataset run, by budget; ~~[#44](https://github.com/bdellos/CS440-Final-Project-Group10/issues/44) Batch API~~ not used). Purpose runs before the `get_skill` full-text fix were relabeled.
+- ✅ [#45](https://github.com/bdellos/CS440-Final-Project-Group10/issues/45) hand-labeled held-out set (Brendan); ~~[#46](https://github.com/bdellos/CS440-Final-Project-Group10/issues/46)~~ Ryan's not supplied → ✅ [#47](https://github.com/bdellos/CS440-Final-Project-Group10/issues/47) Cohen's kappa (`analysis/kappa.md`)
+- ✅ [#48](https://github.com/bdellos/CS440-Final-Project-Group10/issues/48) labeler vs skeptic, ✅ [#50](https://github.com/bdellos/CS440-Final-Project-Group10/issues/50) purpose × context cross-tab, ✅ [#51](https://github.com/bdellos/CS440-Final-Project-Group10/issues/51) codebook evolution figure: `analysis/results/`
+- [#54](https://github.com/bdellos/CS440-Final-Project-Group10/issues/54) results by language: tables done; the English-only kappa caveat goes in the report
+- ~~[#27](https://github.com/bdellos/CS440-Final-Project-Group10/issues/27) analyst agent~~ not built (scripts in `analysis/` instead); ~~[#49](https://github.com/bdellos/CS440-Final-Project-Group10/issues/49) seeded vs agent-only ablation~~ not done
 
 ### 10. Write-up
 - [#5](https://github.com/bdellos/CS440-Final-Project-Group10/issues/5) report, with [#20](https://github.com/bdellos/CS440-Final-Project-Group10/issues/20) README finalized alongside it
 
-## Human track
+## Human track ✅
 
 | When | Brendan | Ryan |
 |---|---|---|
-| ✅ Done (2026-11-25) | [#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3) Round 0 coding | [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4) Round 0 coding |
-| Step 7 | Run the workbook import; review purpose v01 | Review purpose v01 |
-| Each round (#42) | Accept / merge / reject proposals; approve the next codebook version | Same |
-| After the freeze ([#43](https://github.com/bdellos/CS440-Final-Project-Group10/issues/43)) | [#45](https://github.com/bdellos/CS440-Final-Project-Group10/issues/45) hand-label held-out set | [#46](https://github.com/bdellos/CS440-Final-Project-Group10/issues/46) hand-label held-out set |
+| ✅ Round 0 | [#3](https://github.com/bdellos/CS440-Final-Project-Group10/issues/3) Round 0 coding | [#4](https://github.com/bdellos/CS440-Final-Project-Group10/issues/4) Round 0 coding |
+| ✅ Codebook rounds | Approved purpose v01, v02 and context v01-v03; decided all proposals | |
+| ✅ After the freeze | [#45](https://github.com/bdellos/CS440-Final-Project-Group10/issues/45) hand-labeled held-out set | [#46](https://github.com/bdellos/CS440-Final-Project-Group10/issues/46) not supplied |
