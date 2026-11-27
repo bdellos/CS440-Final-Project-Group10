@@ -12,15 +12,15 @@ No taxonomy of skill purposes exists yet, so we build one with **human-gated, ag
 
 | Stage | Who | What happens |
 |---|---|---|
-| Round 0 | Both researchers + the open-coder agent | Code the same 50 skills independently and blind, then merge the three code lists into codebook v01 |
+| Round 0 | Both researchers + the open-coder agent | Code the same 50 skills independently and blind, then the open codes are merged into codebook v01 ([how](docs/purpose-brief.md)) |
 | Rounds 1..N | Labeler agent, researchers | The labeler applies the codebook to a new batch and proposes a new category (`PROPOSED_NEW`) when none fits; the researchers accept, merge or reject each proposal; the codebook-consolidator writes the next version |
 | Freeze | Researchers | Stop when a batch of 100 yields fewer than ~2 accepted new categories |
-| Final labeling | Labeler, skeptic, researchers | Agents label with the frozen codebook; the researchers hand-label a held-out set for Cohen's kappa |
-| Analysis | Analyst agent | Frequencies, agreement, purpose x context cross-tab |
+| Final labeling | Labeler, skeptic, context-classifier, researchers | Agents label 1,000 skills and their repositories with the frozen codebooks; a researcher hand-labels a 50-skill held-out set for Cohen's kappa |
+| Analysis | Scripts in `analysis/` | Frequencies, agreement, purpose x context cross-tab, figures |
 
 More info: the full design and its rationale are in [docs/plan.md](docs/plan.md); progress and issue order are in [docs/roadmap.md](docs/roadmap.md).
 
-**Status:** the pipeline, its agents and their tests are built. Round 0 hand coding is in progress, and no real labels exist yet. The analyst and the report come last.
+**Status:** done. Both codebooks are frozen (purpose v02, 14 categories; context v03, 6 categories), 1,000 skills are labeled for both, and the results are in [analysis/results/](analysis/results/). The report is in progress.
 
 ## Repository map
 
@@ -33,6 +33,8 @@ More info: the full design and its rationale are in [docs/plan.md](docs/plan.md)
 | `codebook/` | Versioned codebooks (`purpose/vNN.md`, `context/vNN.md`) |
 | `schemas/label.schema.json` | Shape of every label record |
 | `labels/dump.sql` | Text dump of the project database (samples, runs, labels) |
+| `analysis/` | Results and agreement scripts, and their outputs (`results/`, `kappa.md`) |
+| `docs/` | Design, roadmap, and the researchers' codebook briefs and decisions |
 | `samples/round0.csv` | The Round 0 sample |
 | `tests/` | Unit tests and agent test fixtures |
 | `CLAUDE.md` | Standing rules for every agent working in this repo |
@@ -64,7 +66,7 @@ Requires Windows with Python 3.15, git, and [Claude Code](https://code.claude.co
 6. **GitHub token** (optional; needed only for context labeling at scale): create a fine-grained token with "Public repositories (read-only)" access and no other permissions, and set it as the user environment variable `GITSKILLS_GITHUB_TOKEN`. Without it, GitHub allows 60 requests an hour. Restart Claude Code afterwards.
 7. **Check**:
    ```
-   .venv\Scripts\python -m pytest tests                      # about 365 tests, ~1 minute
+   .venv\Scripts\python -m pytest tests                      # about 410 tests, ~1.5 minutes
    .venv\Scripts\python scripts\pipeline_server.py --status  # dataset, samples, runs, config checks
    ```
 
@@ -92,7 +94,7 @@ All agents run on Claude Haiku 5.5, the cheapest model, with model, effort and t
 | skeptic | Independent second rater with a stricter reading of each category. [More info on the skeptic agent](.claude/agents/skeptic.md) |
 | context-classifier | Labels repositories from their README, files, history and metadata. [More info on the context-classifier agent](.claude/agents/context-classifier.md) |
 | codebook-consolidator | Writes the next codebook version from codes or decided proposals. [More info on the codebook-consolidator agent](.claude/agents/codebook-consolidator.md) |
-| analyst | Statistics and figures (planned, [#27](https://github.com/bdellos/CS440-Final-Project-Group10/issues/27)) |
+| analyst | Not built: the statistics and figures are plain scripts instead (see [Results](#results)) |
 
 Skills the agents load: [qualitative-coding-protocol](.claude/skills/qualitative-coding-protocol/SKILL.md) (evidence, language and labeling rules), [apply-codebook](.claude/skills/apply-codebook/SKILL.md) (labeling procedure), [repo-context-heuristics](.claude/skills/repo-context-heuristics/SKILL.md) (signals for repo types).
 
@@ -114,6 +116,28 @@ Agents read data and write labels only through these tools, which validate every
 | [Batch check](scripts/hooks/batch_check.py) | Sends an agent back if its batch has gaps; asks for `finish_run` when a batch is done |
 
 Every label also records a hash of the exact instructions its agent ran with, so results can be traced and reproduced.
+
+## Results
+
+From the 1,000 final skills (997 with a purpose category). Full tables: [analysis/results/results.md](analysis/results/results.md); held-out agreement: [analysis/kappa.md](analysis/kappa.md).
+
+- **What skills codify:** write-code 19%, review-validate 14%, configure-operate 10%, integrate-external 9%, analyze-research 9%, then design, orchestration, agent knowledge, writing and others.
+- **Where skills live:** operational projects 51%, skill catalogs 31%, personal configs 6%, unclear 6%, templates 3%, demonstrations 3%.
+- **Purpose x context:** personal configs over-index on version control (4.3x) and agent memory (2.1x); catalogs on expert personas (2.0x); operational projects on test writing (1.5x).
+- **Agreement (held-out 50):** labeler vs skeptic kappa 0.78; human vs agent kappa 0.21 (purpose) and 0.26 (context). The agents are consistent with each other but read the codebook differently from a human.
+
+![Purpose by repository context](analysis/results/fig_crosstab.png)
+
+### Reproduce the analysis
+
+Both scripts read the committed `labels/dump.sql`, so they need only the Python setup, not Claude Code or the dataset:
+
+```
+.venv\Scripts\python analysis\results.py                     # tables + 5 figures -> analysis/results/
+.venv\Scripts\python analysis\kappa.py --out analysis\kappa.md # held-out agreement
+```
+
+The held-out set was labeled by hand in a workbook built by `scripts/heldout_workbook.py` and imported with `scripts/import_heldout.py` (dry run first, then `--apply`).
 
 ## Testing
 
