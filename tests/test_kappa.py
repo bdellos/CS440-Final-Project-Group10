@@ -55,3 +55,9 @@ def con(tmp_path):
 def test_heldout_runs_take_the_latest_finished_run_on_the_frozen_codebook(con):
     assert kappa.heldout_runs(con, "purpose") == {"brendan": 3, "labeler": 2}   # ryan open, skeptic on unfrozen v01
     assert kappa.heldout_runs(con, "context") == {}
+
+
+def test_confusions_list_differing_label_sets_most_frequent_first():
+    x = {"i1": frozenset({"a"}), "i2": frozenset({"a"}), "i3": frozenset({"b"}), "i4": frozenset({"a", "c"})}
+    y = {"i1": frozenset({"b"}), "i2": frozenset({"b"}), "i3": frozenset({"b"}), "i4": frozenset({"c"})}
+    assert kappa.confusions(x, y) == [(2, "a", "b"), (1, "a + c", "c")]
